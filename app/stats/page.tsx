@@ -117,7 +117,7 @@ export default function StatsPage() {
   const maxDayTotal = Math.max(...dayStats.map(d => d.total), 1);
 
   return (
-    <div className="p-4 space-y-6 max-w-md mx-auto pb-24">
+    <div className="p-4 space-y-6 max-w-4xl mx-auto pb-24">
       {/* Header */}
       <div className="flex items-center gap-3 pt-4">
         <button 

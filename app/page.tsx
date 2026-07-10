@@ -95,7 +95,7 @@ export default function HomePage() {
     .reduce((sum, tx) => sum + tx.amount, 0);
 
   return (
-    <div className="p-4 space-y-6 max-w-md mx-auto">
+    <div className="p-4 space-y-6 max-w-4xl mx-auto">
       {/* Header */}
       <div className="flex justify-between items-center pt-4">
         <div>
