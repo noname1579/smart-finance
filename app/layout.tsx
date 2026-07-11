@@ -1,6 +1,8 @@
 import type { Metadata, Viewport } from 'next';
 import { Inter } from 'next/font/google';
 import './globals.css';
+import AuthProvider from './components/AuthProvider';
+import AuthGuard from './components/AuthGuard';
 import Navigation from './components/Navigation';
 
 const inter = Inter({ subsets: ['latin'] });
@@ -25,14 +27,16 @@ export default function RootLayout({
   return (
     <html lang="ru" className="dark">
       <body className={`${inter.className} bg-[#0a0a0f] min-h-screen antialiased`}>
-        <div className="relative min-h-screen pb-20 flex justify-center">
-          <div className="w-full max-w-6xl px-4 sm:px-6 lg:px-8">
-            {children}
-          </div>
-        </div>
-
-        {/* Навигация - клиентский компонент */}
-        <Navigation />
+        <AuthProvider>
+          <AuthGuard>
+            <div className="relative min-h-screen pb-20 flex justify-center">
+              <div className="w-full max-w-6xl px-4 sm:px-6 lg:px-8">
+                {children}
+              </div>
+            </div>
+            <Navigation />
+          </AuthGuard>
+        </AuthProvider>
       </body>
     </html>
   );
