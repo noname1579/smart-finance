@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
-import { getFromStorage } from '../lib/storage';
+import { useSession } from 'next-auth/react';
 import CategoryPieChart from '../components/CategoryPieChart';
 
 type Category = {
@@ -21,58 +21,96 @@ type Transaction = {
   description?: string;
 };
 
-const defaultCategories: Category[] = [
-  { id: 'food', name: 'Еда', icon: '🍔', color: '#FF6384', type: 'expense' },
-  { id: 'transport', name: 'Транспорт', icon: '🚗', color: '#36A2EB', type: 'expense' },
-  { id: 'housing', name: 'Жильё', icon: '🏠', color: '#FFCE56', type: 'expense' },
-  { id: 'entertainment', name: 'Развлечения', icon: '🎮', color: '#4BC0C0', type: 'expense' },
-  { id: 'salary', name: 'Зарплата', icon: '💰', color: '#FF9F40', type: 'income' },
-  { id: 'other', name: 'Прочее', icon: '📦', color: '#9966FF', type: 'expense' },
-];
-
 export default function StatsPage() {
   const router = useRouter();
+  const { data: session, status } = useSession();
   const [transactions, setTransactions] = useState<Transaction[]>([]);
-  const [categories] = useState<Category[]>(defaultCategories);
+  const [categories, setCategories] = useState<Category[]>([]);
   const [isLoading, setIsLoading] = useState(true);
 
+  // Загрузка данных
   useEffect(() => {
-    const saved = getFromStorage<Transaction[]>('transactions', []);
-    setTransactions(saved);
-    setIsLoading(false);
-  }, []);
+    if (status === 'unauthenticated') {
+      router.push('/auth/login');
+      return;
+    }
 
-  if (isLoading) {
+    if (status === 'authenticated' && session) {
+      fetchData();
+    }
+  }, [session, status, router]);
+
+  const fetchData = async () => {
+    if (!session) return;
+    
+    try {
+      setIsLoading(true);
+      
+      // Загружаем и транзакции, и категории
+      const [txsRes, catsRes] = await Promise.all([
+        fetch('/api/transactions', {
+          cache: 'no-store',
+          headers: { 'Cache-Control': 'no-cache' },
+        }),
+        fetch('/api/categories', {
+          cache: 'no-store',
+          headers: { 'Cache-Control': 'no-cache' },
+        }),
+      ]);
+
+      if (!txsRes.ok || !catsRes.ok) {
+        throw new Error('Ошибка загрузки данных');
+      }
+
+      const txs = await txsRes.json();
+      const cats = await catsRes.json();
+
+      console.log('📊 Загружено транзакций:', txs.length);
+      console.log('📂 Загружено категорий:', cats.length);
+      
+      setTransactions(txs);
+      setCategories(cats);
+    } catch (error) {
+      console.error('Error fetching data:', error);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  if (status === 'loading' || isLoading) {
     return (
-      <div className="flex flex-col justify-center items-center h-screen">
+      <div className="flex flex-col justify-center items-center h-screen bg-[#0a0a0f]">
         <div className="w-12 h-12 border-3 border-blue-500/20 border-t-blue-500 rounded-full animate-spin"></div>
         <p className="mt-4 text-gray-500">Загрузка...</p>
       </div>
     );
   }
 
-  // Расчёты
+  // Подсчёт с использованием загруженных категорий
   const totalExpense = transactions
     .filter(tx => {
       const cat = categories.find(c => c.id === tx.categoryId);
-      return cat?.type === 'expense' && tx.amount > 0;
+      return cat?.type === 'expense';
     })
-    .reduce((sum, tx) => sum + tx.amount, 0);
+    .reduce((sum, tx) => sum + (tx.amount || 0), 0);
 
   const totalIncome = transactions
     .filter(tx => {
       const cat = categories.find(c => c.id === tx.categoryId);
-      return cat?.type === 'income' && tx.amount > 0;
+      return cat?.type === 'income';
     })
-    .reduce((sum, tx) => sum + tx.amount, 0);
+    .reduce((sum, tx) => sum + (tx.amount || 0), 0);
+
+  console.log('💸 Расходы:', totalExpense);
+  console.log('💰 Доходы:', totalIncome);
 
   // Расходы по категориям
   const categoryStats = categories
     .filter(cat => cat.type === 'expense')
     .map(cat => {
       const total = transactions
-        .filter(tx => tx.categoryId === cat.id && tx.amount > 0)
-        .reduce((sum, tx) => sum + tx.amount, 0);
+        .filter(tx => tx.categoryId === cat.id)
+        .reduce((sum, tx) => sum + (tx.amount || 0), 0);
       return { ...cat, total };
     })
     .filter(cat => cat.total > 0)
@@ -82,11 +120,11 @@ export default function StatsPage() {
   const monthStats = transactions
     .filter(tx => {
       const cat = categories.find(c => c.id === tx.categoryId);
-      return cat?.type === 'expense' && tx.amount > 0;
+      return cat?.type === 'expense';
     })
     .reduce<Record<string, number>>((acc, tx) => {
       const month = tx.date.substring(0, 7);
-      acc[month] = (acc[month] || 0) + tx.amount;
+      acc[month] = (acc[month] || 0) + (tx.amount || 0);
       return acc;
     }, {});
 
@@ -94,7 +132,7 @@ export default function StatsPage() {
     .sort((a, b) => a[0].localeCompare(b[0]))
     .slice(-6);
 
-  // Статистика по дням (последние 7 дней)
+  // Статистика по дням
   const now = new Date();
   const dayStats = Array.from({ length: 7 }, (_, i) => {
     const d = new Date(now);
@@ -103,9 +141,9 @@ export default function StatsPage() {
     const total = transactions
       .filter(tx => {
         const cat = categories.find(c => c.id === tx.categoryId);
-        return cat?.type === 'expense' && tx.date === dateStr && tx.amount > 0;
+        return cat?.type === 'expense' && tx.date === dateStr;
       })
-      .reduce((sum, tx) => sum + tx.amount, 0);
+      .reduce((sum, tx) => sum + (tx.amount || 0), 0);
     return {
       date: dateStr,
       day: d.getDate(),
@@ -133,7 +171,7 @@ export default function StatsPage() {
         </h1>
       </div>
 
-      {/* Total Cards - без знаков + и - */}
+      {/* Total Cards */}
       <div className="grid grid-cols-2 gap-3">
         <div className="glass rounded-2xl p-4 border border-white/5 hover-scale">
           <p className="text-xs text-gray-400">💰 Доходы</p>
@@ -195,7 +233,7 @@ export default function StatsPage() {
         <div className="glass rounded-2xl p-5 border border-white/5">
           <h2 className="text-sm font-semibold mb-3 text-gray-300">🏆 Топ категорий</h2>
           <div className="space-y-3">
-            {categoryStats.slice(0, 5).map((cat, index) => {
+            {categoryStats.slice(0, 5).map((cat) => {
               const max = categoryStats[0]?.total || 1;
               const percentage = (cat.total / max) * 100;
               

@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { useSession } from 'next-auth/react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
@@ -34,23 +34,25 @@ export default function HomePage() {
   const [categories, setCategories] = useState<Category[]>([]);
   const [isLoading, setIsLoading] = useState(true);
 
-  // Загрузка данных
-  useEffect(() => {
-    if (status === 'unauthenticated') {
-      router.push('/auth/login');
-      return;
-    }
-
-    if (session) {
-      fetchData();
-    }
-  }, [session, status]);
-
-  const fetchData = async () => {
+  // Функция загрузки данных
+  const fetchData = useCallback(async () => {
+    if (!session) return;
+    
     try {
+      setIsLoading(true);
       const [txsRes, catsRes] = await Promise.all([
-        fetch('/api/transactions'),
-        fetch('/api/categories'),
+        fetch('/api/transactions', {
+          cache: 'no-store',
+          headers: {
+            'Cache-Control': 'no-cache',
+          },
+        }),
+        fetch('/api/categories', {
+          cache: 'no-store',
+          headers: {
+            'Cache-Control': 'no-cache',
+          },
+        }),
       ]);
 
       if (!txsRes.ok || !catsRes.ok) {
@@ -67,13 +69,26 @@ export default function HomePage() {
     } finally {
       setIsLoading(false);
     }
-  };
+  }, [session]);
+
+  // Загрузка данных при каждом изменении статуса сессии
+  useEffect(() => {
+    if (status === 'unauthenticated') {
+      router.push('/auth/login');
+      return;
+    }
+
+    if (status === 'authenticated' && session) {
+      fetchData();
+    }
+  }, [session, status, router, fetchData]);
 
   // Обновление транзакций (для TransactionList)
   const handleUpdateTransactions = async (updated: Transaction[]) => {
     setTransactions(updated);
   };
 
+  // Отображение загрузки
   if (status === 'loading' || isLoading) {
     return (
       <div className="flex justify-center items-center h-screen bg-[#0a0a0f]">
@@ -124,12 +139,13 @@ export default function HomePage() {
         </div>
         <div className="flex items-center gap-3">
           <span className="text-sm text-gray-300">{session?.user?.name}</span>
-          <button
-            onClick={() => router.push('/api/auth/signout')}
+          <Link
+            href="/api/auth/signout"
             className="glass rounded-full p-2 w-10 h-10 flex items-center justify-center hover:bg-white/5 transition"
+            title="Выйти"
           >
             <span className="text-lg">🚪</span>
-          </button>
+          </Link>
         </div>
       </div>
 

@@ -47,9 +47,6 @@ export default function Navigation() {
               }`}>
                 {item.label}
               </span>
-              {isActive && (
-                <span className="absolute -top-1 left-1/2 -translate-x-1/2 w-6 h-1 bg-gradient-to-r from-blue-500 to-purple-500 rounded-full shadow-lg shadow-blue-500/50" />
-              )}
             </Link>
           );
         })}

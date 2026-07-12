@@ -4,6 +4,7 @@ import './globals.css';
 import AuthProvider from './components/AuthProvider';
 import AuthGuard from './components/AuthGuard';
 import Navigation from './components/Navigation';
+import { ToastProvider } from './components/ToastProvider';
 
 const inter = Inter({ subsets: ['latin'] });
 
@@ -28,14 +29,16 @@ export default function RootLayout({
     <html lang="ru" className="dark">
       <body className={`${inter.className} bg-[#0a0a0f] min-h-screen antialiased`}>
         <AuthProvider>
-          <AuthGuard>
-            <div className="relative min-h-screen pb-20 flex justify-center">
-              <div className="w-full max-w-6xl px-4 sm:px-6 lg:px-8">
-                {children}
+          <ToastProvider>
+            <AuthGuard>
+              <div className="relative min-h-screen pb-20 flex justify-center">
+                <div className="w-full max-w-6xl px-4 sm:px-6 lg:px-8">
+                  {children}
+                </div>
               </div>
-            </div>
-            <Navigation />
-          </AuthGuard>
+              <Navigation />
+            </AuthGuard>
+          </ToastProvider>
         </AuthProvider>
       </body>
     </html>

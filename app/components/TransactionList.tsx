@@ -3,6 +3,7 @@
 import { useState } from 'react';
 import { format, parseISO } from 'date-fns';
 import { ru } from 'date-fns/locale';
+import { useToast } from './ToastProvider';
 import EditModal from './EditModal';
 
 type Transaction = {
@@ -29,6 +30,7 @@ type Props = {
 };
 
 export default function TransactionList({ transactions, categories, onUpdate }: Props) {
+  const { showToast } = useToast();
   const [editingTransaction, setEditingTransaction] = useState<Transaction | null>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
 
@@ -52,9 +54,10 @@ export default function TransactionList({ transactions, categories, onUpdate }: 
 
       const updated = transactions.filter(tx => tx.id !== id);
       onUpdate(updated);
+      showToast('🗑️ Транзакция удалена', 'success');
     } catch (error) {
       console.error('Delete error:', error);
-      alert('Ошибка удаления транзакции');
+      showToast('❌ Ошибка удаления транзакции', 'error');
     }
   };
 
@@ -75,9 +78,10 @@ export default function TransactionList({ transactions, categories, onUpdate }: 
       onUpdate(updated);
       setIsModalOpen(false);
       setEditingTransaction(null);
+      showToast('✏️ Транзакция обновлена', 'success');
     } catch (error) {
       console.error('Edit error:', error);
-      alert('Ошибка обновления транзакции');
+      showToast('❌ Ошибка обновления транзакции', 'error');
     }
   };
 

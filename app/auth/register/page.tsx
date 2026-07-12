@@ -4,9 +4,11 @@ import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { signIn } from 'next-auth/react';
+import { useToast } from '@/app/components/ToastProvider';
 
 export default function RegisterPage() {
   const router = useRouter();
+  const { showToast } = useToast();
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -62,6 +64,8 @@ export default function RegisterPage() {
         return;
       }
 
+      showToast('🎉 Аккаунт создан! Выполняется вход...', 'success');
+
       const result = await signIn('credentials', {
         email,
         password,
@@ -74,6 +78,7 @@ export default function RegisterPage() {
         return;
       }
 
+      showToast('🎉 Добро пожаловать в SmartFinance!', 'success');
       router.push('/');
     } catch (error) {
       setError('Произошла ошибка. Попробуйте позже.');
@@ -186,9 +191,6 @@ export default function RegisterPage() {
             <Link href="/auth/login" className="text-blue-400 hover:text-blue-300 transition font-medium hover:underline">
               Войти
             </Link>
-          </p>
-          <p className="text-xs text-gray-500 mt-4">
-            💡 Все данные хранятся в защищённой базе данных
           </p>
         </div>
       </div>

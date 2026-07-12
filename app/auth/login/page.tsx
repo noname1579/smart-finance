@@ -4,9 +4,11 @@ import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { signIn } from 'next-auth/react';
+import { useToast } from '@/app/components/ToastProvider';
 
 export default function LoginPage() {
   const router = useRouter();
+  const { showToast } = useToast();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
@@ -46,6 +48,8 @@ export default function LoginPage() {
         return;
       }
 
+      // ✅ Успешный вход
+      showToast('Вы успешно вошли в систему', 'success');
       router.push('/');
     } catch (error) {
       setError('Произошла ошибка. Попробуйте позже.');
@@ -126,9 +130,6 @@ export default function LoginPage() {
             <Link href="/auth/register" className="text-blue-400 hover:text-blue-300 transition font-medium hover:underline">
               Зарегистрироваться
             </Link>
-          </p>
-          <p className="text-xs text-gray-500 mt-4">
-            💡 Войдите, чтобы управлять финансами
           </p>
         </div>
       </div>
