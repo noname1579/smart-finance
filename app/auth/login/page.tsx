@@ -120,7 +120,7 @@ export default function LoginPage() {
             disabled={isLoading}
             className="w-full bg-gradient-to-r from-blue-600 to-blue-500 text-white py-3.5 rounded-xl font-medium text-base hover:shadow-lg hover:shadow-blue-500/20 transition-all hover:scale-[1.02] active:scale-[0.98] disabled:opacity-50 disabled:cursor-not-allowed"
           >
-            {isLoading ? '⏳ Вход...' : '🔑 Войти'}
+            {isLoading ? '⏳ Вход...' : 'Войти'}
           </button>
         </form>
 

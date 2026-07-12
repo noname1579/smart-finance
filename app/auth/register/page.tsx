@@ -64,7 +64,7 @@ export default function RegisterPage() {
         return;
       }
 
-      showToast('🎉 Аккаунт создан! Выполняется вход...', 'success');
+      showToast('Аккаунт создан! Выполняется вход...', 'success');
 
       const result = await signIn('credentials', {
         email,
@@ -78,7 +78,7 @@ export default function RegisterPage() {
         return;
       }
 
-      showToast('🎉 Добро пожаловать в SmartFinance!', 'success');
+      showToast('Добро пожаловать в SmartFinance!', 'success');
       router.push('/');
     } catch (error) {
       setError('Произошла ошибка. Попробуйте позже.');
@@ -181,7 +181,7 @@ export default function RegisterPage() {
             disabled={isLoading}
             className="w-full bg-gradient-to-r from-blue-600 to-blue-500 text-white py-3.5 rounded-xl font-medium text-base hover:shadow-lg hover:shadow-blue-500/20 transition-all hover:scale-[1.02] active:scale-[0.98] disabled:opacity-50 disabled:cursor-not-allowed"
           >
-            {isLoading ? '⏳ Создание...' : '✅ Создать аккаунт'}
+            {isLoading ? 'Создание...' : 'Создать аккаунт'}
           </button>
         </form>
 
