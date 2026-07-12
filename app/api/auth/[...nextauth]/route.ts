@@ -49,11 +49,14 @@ export const authOptions: NextAuthOptions = {
       return token;
     },
     async session({ session, token }) {
-      // Добавляем id в session.user через расширение
-      session.user = {
-        ...session.user,
-        id: token.id as string,
-      };
+      if (token) {
+        session.user = {
+          ...session.user,
+          id: token.id as string,
+          email: token.email as string,
+          name: token.name as string,
+        };
+      }
       return session;
     },
   },
@@ -64,7 +67,7 @@ export const authOptions: NextAuthOptions = {
     strategy: "jwt" as const,
     maxAge: 30 * 24 * 60 * 60,
   },
-  secret: process.env.NEXTAUTH_SECRET || "your-secret-key",
+  secret: process.env.NEXTAUTH_SECRET,
 };
 
 const handler = NextAuth(authOptions);

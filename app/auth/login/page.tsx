@@ -14,15 +14,11 @@ export default function LoginPage() {
   const [showPassword, setShowPassword] = useState(false);
 
   useEffect(() => {
-    const originalOverflow = document.body.style.overflow;
-    const originalTouchAction = document.body.style.touchAction;
-    
     document.body.style.overflow = 'hidden';
     document.body.style.touchAction = 'none';
-    
     return () => {
-      document.body.style.overflow = originalOverflow;
-      document.body.style.touchAction = originalTouchAction;
+      document.body.style.overflow = '';
+      document.body.style.touchAction = '';
     };
   }, []);
 
@@ -118,22 +114,16 @@ export default function LoginPage() {
           <button
             type="submit"
             disabled={isLoading}
-            className="w-full bg-gradient-to-r from-blue-600 to-blue-500 text-white py-3.5 rounded-xl font-medium text-base hover:shadow-lg hover:shadow-blue-500/20 transition-all hover:scale-[1.02] active:scale-[0.98] disabled:opacity-50 disabled:cursor-not-allowed relative overflow-hidden group"
+            className="w-full bg-gradient-to-r from-blue-600 to-blue-500 text-white py-3.5 rounded-xl font-medium text-base hover:shadow-lg hover:shadow-blue-500/20 transition-all hover:scale-[1.02] active:scale-[0.98] disabled:opacity-50 disabled:cursor-not-allowed"
           >
-            <span className="relative z-10">
-              {isLoading ? '⏳ Вход...' : '🔑 Войти'}
-            </span>
-            <div className="absolute inset-0 bg-gradient-to-r from-blue-500 to-purple-500 opacity-0 group-hover:opacity-20 transition-opacity"></div>
+            {isLoading ? '⏳ Вход...' : '🔑 Войти'}
           </button>
         </form>
 
         <div className="mt-6 text-center relative z-10">
           <p className="text-sm text-gray-400">
             Нет аккаунта?{' '}
-            <Link 
-              href="/auth/register" 
-              className="text-blue-400 hover:text-blue-300 transition font-medium hover:underline"
-            >
+            <Link href="/auth/register" className="text-blue-400 hover:text-blue-300 transition font-medium hover:underline">
               Зарегистрироваться
             </Link>
           </p>

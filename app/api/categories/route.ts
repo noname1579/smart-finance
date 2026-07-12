@@ -1,0 +1,130 @@
+import { NextResponse } from 'next/server';
+import { getServerSession } from 'next-auth';
+import { authOptions } from '@/app/api/auth/[...nextauth]/route';
+import { prisma } from '@/app/lib/prisma';
+
+// GET — получить все категории пользователя
+export async function GET() {
+  const session = await getServerSession(authOptions);
+
+  if (!session) {
+    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+  }
+
+  const categories = await prisma.category.findMany({
+    where: { userId: session.user.id },
+    orderBy: { createdAt: 'asc' },
+  });
+
+  return NextResponse.json(categories);
+}
+
+// POST — создать категорию
+export async function POST(request: Request) {
+  const session = await getServerSession(authOptions);
+
+  if (!session) {
+    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+  }
+
+  try {
+    const body = await request.json();
+    const { name, icon, color, type } = body;
+
+    if (!name || !type) {
+      return NextResponse.json(
+        { error: 'Название и тип обязательны' },
+        { status: 400 }
+      );
+    }
+
+    // Проверяем, нет ли уже такой категории у пользователя
+    const existing = await prisma.category.findFirst({
+      where: {
+        userId: session.user.id,
+        name: { equals: name, mode: 'insensitive' },
+      },
+    });
+
+    if (existing) {
+      return NextResponse.json(
+        { error: 'Категория с таким названием уже существует' },
+        { status: 409 }
+      );
+    }
+
+    const category = await prisma.category.create({
+      data: {
+        userId: session.user.id,
+        name,
+        icon: icon || '📌',
+        color: color || '#8884d8',
+        type,
+        isSystem: false,
+      },
+    });
+
+    return NextResponse.json(category, { status: 201 });
+  } catch (error) {
+    console.error('Category creation error:', error);
+    return NextResponse.json(
+      { error: 'Ошибка создания категории' },
+      { status: 500 }
+    );
+  }
+}
+
+// DELETE — удалить категорию
+export async function DELETE(request: Request) {
+  const session = await getServerSession(authOptions);
+
+  if (!session) {
+    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+  }
+
+  try {
+    const { searchParams } = new URL(request.url);
+    const id = searchParams.get('id');
+
+    if (!id) {
+      return NextResponse.json(
+        { error: 'ID категории обязателен' },
+        { status: 400 }
+      );
+    }
+
+    // Проверяем, что категория принадлежит пользователю
+    const category = await prisma.category.findFirst({
+      where: { id, userId: session.user.id },
+    });
+
+    if (!category) {
+      return NextResponse.json(
+        { error: 'Категория не найдена' },
+        { status: 404 }
+      );
+    }
+
+    // Проверяем, используется ли категория в транзакциях
+    const transactions = await prisma.transaction.findFirst({
+      where: { categoryId: id },
+    });
+
+    if (transactions) {
+      return NextResponse.json(
+        { error: 'Категория используется в транзакциях' },
+        { status: 409 }
+      );
+    }
+
+    await prisma.category.delete({ where: { id } });
+
+    return NextResponse.json({ message: 'Категория удалена' });
+  } catch (error) {
+    console.error('Category deletion error:', error);
+    return NextResponse.json(
+      { error: 'Ошибка удаления категории' },
+      { status: 500 }
+    );
+  }
+}

@@ -17,6 +17,7 @@ model User {
   
   transactions Transaction[]
   categories   Category[]
+  budgets      Budget[]
 }
 
 model Category {
@@ -25,13 +26,14 @@ model Category {
   name      String
   icon      String
   color     String
-  type      String
+  type      String          // "income" или "expense"
   isSystem  Boolean       @default(false)
   createdAt DateTime      @default(now())
   updatedAt DateTime      @updatedAt
   
   user       User         @relation(fields: [userId], references: [id], onDelete: Cascade)
   transactions Transaction[]
+  budgets    Budget[]
 }
 
 model Transaction {
@@ -42,6 +44,21 @@ model Transaction {
   description String?
   date        DateTime
   isAuto      Boolean  @default(false)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  
+  user     User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  category Category? @relation(fields: [categoryId], references: [id], onDelete: SetNull)
+}
+
+model Budget {
+  id          String   @id @default(cuid())
+  userId      String
+  categoryId  String?
+  limitAmount Float
+  period      String   // "monthly", "weekly"
+  startDate   DateTime
+  endDate     DateTime?
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
   

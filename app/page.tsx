@@ -1,8 +1,9 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import { useSession } from 'next-auth/react';
+import { useRouter } from 'next/navigation';
 import Link from 'next/link';
-import { getFromStorage, setToStorage } from './lib/storage';
 import CategoryPieChart from './components/CategoryPieChart';
 import TransactionList from './components/TransactionList';
 import ScanButton from './components/ScanButton';
@@ -26,50 +27,65 @@ type Transaction = {
   createdAt: string;
 };
 
-const defaultCategories: Category[] = [
-  { id: 'food', name: 'Еда', icon: '🍔', color: '#FF6384', type: 'expense' },
-  { id: 'transport', name: 'Транспорт', icon: '🚗', color: '#36A2EB', type: 'expense' },
-  { id: 'housing', name: 'Жильё', icon: '🏠', color: '#FFCE56', type: 'expense' },
-  { id: 'entertainment', name: 'Развлечения', icon: '🎮', color: '#4BC0C0', type: 'expense' },
-  { id: 'salary', name: 'Зарплата', icon: '💰', color: '#FF9F40', type: 'income' },
-  { id: 'other', name: 'Прочее', icon: '📦', color: '#9966FF', type: 'expense' },
-];
-
 export default function HomePage() {
+  const { data: session, status } = useSession();
+  const router = useRouter();
   const [transactions, setTransactions] = useState<Transaction[]>([]);
-  const [categories] = useState<Category[]>(defaultCategories);
+  const [categories, setCategories] = useState<Category[]>([]);
   const [isLoading, setIsLoading] = useState(true);
 
-  // Загрузка данных при монтировании
+  // Загрузка данных
   useEffect(() => {
-    const saved = getFromStorage<Transaction[]>('transactions', []);
-    setTransactions(saved);
-    setIsLoading(false);
-  }, []);
-
-  // Сохранение при изменении
-  useEffect(() => {
-    if (!isLoading) {
-      setToStorage('transactions', transactions);
+    if (status === 'unauthenticated') {
+      router.push('/auth/login');
+      return;
     }
-  }, [transactions, isLoading]);
 
-  // Функция обновления транзакций (передаётся в TransactionList)
-  const handleUpdateTransactions = (updated: Transaction[]) => {
-    setTransactions(updated);
-    setToStorage('transactions', updated);
+    if (session) {
+      fetchData();
+    }
+  }, [session, status]);
+
+  const fetchData = async () => {
+    try {
+      const [txsRes, catsRes] = await Promise.all([
+        fetch('/api/transactions'),
+        fetch('/api/categories'),
+      ]);
+
+      if (!txsRes.ok || !catsRes.ok) {
+        throw new Error('Ошибка загрузки данных');
+      }
+
+      const txs = await txsRes.json();
+      const cats = await catsRes.json();
+
+      setTransactions(txs);
+      setCategories(cats);
+    } catch (error) {
+      console.error('Error fetching data:', error);
+    } finally {
+      setIsLoading(false);
+    }
   };
 
-  if (isLoading) {
+  // Обновление транзакций (для TransactionList)
+  const handleUpdateTransactions = async (updated: Transaction[]) => {
+    setTransactions(updated);
+  };
+
+  if (status === 'loading' || isLoading) {
     return (
-      <div className="flex flex-col justify-center items-center h-screen">
-        <div className="w-12 h-12 border-3 border-blue-500/20 border-t-blue-500 rounded-full animate-spin"></div>
-        <p className="mt-4 text-gray-500">Загрузка...</p>
+      <div className="flex justify-center items-center h-screen bg-[#0a0a0f]">
+        <div className="text-center">
+          <div className="w-12 h-12 border-3 border-blue-500/20 border-t-blue-500 rounded-full animate-spin mx-auto"></div>
+          <p className="mt-4 text-gray-500">Загрузка...</p>
+        </div>
       </div>
     );
   }
 
-  // Расчеты
+  // Расчёты
   const totalIncome = transactions
     .filter(tx => categories.find(c => c.id === tx.categoryId)?.type === 'income')
     .reduce((sum, tx) => sum + tx.amount, 0);
@@ -106,8 +122,14 @@ export default function HomePage() {
             {format(new Date(), 'dd MMMM yyyy', { locale: ru })}
           </p>
         </div>
-        <div className="glass rounded-full p-2 w-10 h-10 flex items-center justify-center">
-          <span className="text-lg">👤</span>
+        <div className="flex items-center gap-3">
+          <span className="text-sm text-gray-300">{session?.user?.name}</span>
+          <button
+            onClick={() => router.push('/api/auth/signout')}
+            className="glass rounded-full p-2 w-10 h-10 flex items-center justify-center hover:bg-white/5 transition"
+          >
+            <span className="text-lg">🚪</span>
+          </button>
         </div>
       </div>
 
@@ -117,7 +139,7 @@ export default function HomePage() {
         <div className="absolute -bottom-20 -left-20 w-40 h-40 bg-purple-500/10 rounded-full blur-3xl"></div>
         
         <p className="text-sm text-gray-400 relative z-10">Общий баланс</p>
-        <p className="text-4xl font-bold relative z-10">
+        <p className={`text-4xl font-bold relative z-10 ${balance >= 0 ? 'text-green-400' : 'text-red-400'}`}>
           {balance.toLocaleString()} ₽
         </p>
         
