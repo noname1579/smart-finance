@@ -55,27 +55,28 @@ export async function POST(request: Request) {
     });
 
     // ⭐ ОБНОВЛЯЕМ SPENTAMOUNT В БЮДЖЕТАХ
-    // Находим активный бюджет для этой категории
-    const activeBudget = await prisma.budget.findFirst({
-      where: {
-        userId: session.user.id,
-        categoryId,
-        isActive: true,
-        startDate: { lte: transactionDate },
-        endDate: { gte: transactionDate },
-      },
-    });
-
-    if (activeBudget) {
-      // Обновляем spentAmount (увеличиваем на сумму транзакции)
-      await prisma.budget.update({
-        where: { id: activeBudget.id },
-        data: {
-          spentAmount: {
-            increment: numAmount,
-          },
+    // Находим активный бюджет для этой категории (ТОЛЬКО если categoryId не null)
+    if (categoryId) {
+      const activeBudget = await prisma.budget.findFirst({
+        where: {
+          userId: session.user.id,
+          categoryId: categoryId, // ← теперь точно string
+          isActive: true,
+          startDate: { lte: transactionDate },
+          endDate: { gte: transactionDate },
         },
       });
+
+      if (activeBudget) {
+        await prisma.budget.update({
+          where: { id: activeBudget.id },
+          data: {
+            spentAmount: {
+              increment: numAmount,
+            },
+          },
+        });
+      }
     }
 
     return NextResponse.json(transaction, { status: 201 });
@@ -119,26 +120,28 @@ export async function DELETE(request: Request) {
       );
     }
 
-    // ⭐ УМЕНЬШАЕМ SPENTAMOUNT В БЮДЖЕТЕ
-    const activeBudget = await prisma.budget.findFirst({
-      where: {
-        userId: session.user.id,
-        categoryId: transaction.categoryId,
-        isActive: true,
-        startDate: { lte: transaction.date },
-        endDate: { gte: transaction.date },
-      },
-    });
-
-    if (activeBudget) {
-      await prisma.budget.update({
-        where: { id: activeBudget.id },
-        data: {
-          spentAmount: {
-            decrement: transaction.amount,
-          },
+    // ⭐ УМЕНЬШАЕМ SPENTAMOUNT В БЮДЖЕТЕ (ТОЛЬКО если categoryId не null)
+    if (transaction.categoryId) {
+      const activeBudget = await prisma.budget.findFirst({
+        where: {
+          userId: session.user.id,
+          categoryId: transaction.categoryId, // ← теперь точно string
+          isActive: true,
+          startDate: { lte: transaction.date },
+          endDate: { gte: transaction.date },
         },
       });
+
+      if (activeBudget) {
+        await prisma.budget.update({
+          where: { id: activeBudget.id },
+          data: {
+            spentAmount: {
+              decrement: transaction.amount,
+            },
+          },
+        });
+      }
     }
 
     // Удаляем транзакцию
@@ -202,48 +205,52 @@ export async function PUT(request: Request) {
 
     // ⭐ ПЕРЕСЧИТЫВАЕМ SPENTAMOUNT ДЛЯ СТАРОЙ И НОВОЙ КАТЕГОРИИ
 
-    // 1. Уменьшаем для старой категории
-    const oldBudget = await prisma.budget.findFirst({
-      where: {
-        userId: session.user.id,
-        categoryId: oldTransaction.categoryId,
-        isActive: true,
-        startDate: { lte: oldTransaction.date },
-        endDate: { gte: oldTransaction.date },
-      },
-    });
-
-    if (oldBudget) {
-      await prisma.budget.update({
-        where: { id: oldBudget.id },
-        data: {
-          spentAmount: {
-            decrement: oldTransaction.amount,
-          },
+    // 1. Уменьшаем для старой категории (если она была)
+    if (oldTransaction.categoryId) {
+      const oldBudget = await prisma.budget.findFirst({
+        where: {
+          userId: session.user.id,
+          categoryId: oldTransaction.categoryId, // ← теперь точно string
+          isActive: true,
+          startDate: { lte: oldTransaction.date },
+          endDate: { gte: oldTransaction.date },
         },
       });
+
+      if (oldBudget) {
+        await prisma.budget.update({
+          where: { id: oldBudget.id },
+          data: {
+            spentAmount: {
+              decrement: oldTransaction.amount,
+            },
+          },
+        });
+      }
     }
 
-    // 2. Увеличиваем для новой категории
-    const newBudget = await prisma.budget.findFirst({
-      where: {
-        userId: session.user.id,
-        categoryId,
-        isActive: true,
-        startDate: { lte: transactionDate },
-        endDate: { gte: transactionDate },
-      },
-    });
-
-    if (newBudget) {
-      await prisma.budget.update({
-        where: { id: newBudget.id },
-        data: {
-          spentAmount: {
-            increment: numAmount,
-          },
+    // 2. Увеличиваем для новой категории (если она есть)
+    if (categoryId) {
+      const newBudget = await prisma.budget.findFirst({
+        where: {
+          userId: session.user.id,
+          categoryId: categoryId, // ← теперь точно string
+          isActive: true,
+          startDate: { lte: transactionDate },
+          endDate: { gte: transactionDate },
         },
       });
+
+      if (newBudget) {
+        await prisma.budget.update({
+          where: { id: newBudget.id },
+          data: {
+            spentAmount: {
+              increment: numAmount,
+            },
+          },
+        });
+      }
     }
 
     return NextResponse.json(updated);
