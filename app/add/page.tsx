@@ -245,12 +245,6 @@ export default function AddPage() {
             </div>
           )}
           
-          {categoryId && (
-            <p className="text-xs text-blue-400 mt-2">
-              ✅ Выбрана: {categories.find(c => c.id === categoryId)?.icon} {categories.find(c => c.id === categoryId)?.name}
-            </p>
-          )}
-          
           <div className="flex justify-between mt-2">
             <button
               type="button"
@@ -259,14 +253,7 @@ export default function AddPage() {
               }}
               className="text-xs text-blue-400 hover:text-blue-300 transition"
             >
-              + Управлять категориями
-            </button>
-            <button
-              type="button"
-              onClick={fetchCategories}
-              className="text-xs text-gray-400 hover:text-white transition"
-            >
-              🔄 Обновить список
+              Управлять категориями
             </button>
           </div>
         </div>
@@ -309,7 +296,7 @@ export default function AddPage() {
               : 'bg-gradient-to-r from-green-600 to-green-500 text-white shadow-green-500/20 hover:shadow-green-500/30'
           }`}
         >
-          {isExpense ? '✅ Добавить расход' : '✅ Добавить доход'}
+          {isExpense ? 'Добавить расход' : 'Добавить доход'}
         </button>
       </form>
     </div>

@@ -169,7 +169,7 @@ export default function CategoriesPage() {
 
       {/* Форма добавления */}
       <div className="glass rounded-2xl p-5 border border-white/5">
-        <h2 className="text-sm font-semibold text-gray-300 mb-4">➕ Новая категория</h2>
+        <h2 className="text-sm font-semibold text-gray-300 mb-4">Новая категория</h2>
         
         <form onSubmit={handleAddCategory} className="space-y-3">
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
@@ -242,7 +242,7 @@ export default function CategoriesPage() {
             type="submit"
             className="w-full bg-gradient-to-r from-blue-600 to-blue-500 text-white py-2.5 rounded-xl text-sm font-medium hover:shadow-lg hover:shadow-blue-500/20 transition-all hover:scale-[1.02] active:scale-[0.98]"
           >
-            ➕ Добавить категорию
+            Добавить категорию
           </button>
         </form>
       </div>
@@ -325,7 +325,8 @@ export default function CategoriesPage() {
                         )}
                       </div>
                     </div>
-                    <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                    {/* ⭐ КНОПКИ ВСЕГДА ВИДНЫ — убрали opacity-0 group-hover */}
+                    <div className="flex gap-1">
                       <button
                         onClick={() => startEditing(cat)}
                         className="p-1.5 rounded-lg hover:bg-blue-500/20 text-gray-400 hover:text-blue-400 transition"

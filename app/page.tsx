@@ -11,6 +11,7 @@ import TransactionList from './components/TransactionList';
 import ScanButton from './components/ScanButton';
 import { format, parseISO, isToday, isThisMonth } from 'date-fns';
 import { ru } from 'date-fns/locale';
+import { formatMoney } from '@/app/lib/formatMoney';
 
 type Category = {
   id: string;
@@ -132,17 +133,17 @@ export default function HomePage() {
         
         <p className="text-sm text-gray-400 relative z-10">Общий баланс</p>
         <p className={`text-4xl font-bold relative z-10 ${balance >= 0 ? 'text-green-400' : 'text-red-400'}`}>
-          {balance.toLocaleString()} ₽
+          {formatMoney(balance)}
         </p>
         
         <div className="flex gap-6 mt-4 relative z-10">
           <div>
             <p className="text-xs text-green-400/60">Доходы</p>
-            <p className="text-sm font-semibold text-green-400">+{totalIncome.toLocaleString()} ₽</p>
+            <p className="text-sm font-semibold text-green-400">+{formatMoney(totalIncome)}</p>
           </div>
           <div>
             <p className="text-xs text-red-400/60">Расходы</p>
-            <p className="text-sm font-semibold text-red-400">-{totalExpense.toLocaleString()} ₽</p>
+            <p className="text-sm font-semibold text-red-400">-{formatMoney(totalExpense)}</p>
           </div>
         </div>
       </div>
@@ -151,13 +152,13 @@ export default function HomePage() {
         <div className="glass rounded-2xl p-4 border border-white/5 hover-scale">
           <p className="text-xs text-gray-400">Сегодня</p>
           <p className="text-xl font-bold text-red-400">
-            {todaySpend.toLocaleString()} ₽
+            {formatMoney(todaySpend)}
           </p>
         </div>
         <div className="glass rounded-2xl p-4 border border-white/5 hover-scale">
           <p className="text-xs text-gray-400">За месяц</p>
           <p className="text-xl font-bold text-red-400">
-            {monthSpend.toLocaleString()} ₽
+            {formatMoney(monthSpend)}
           </p>
         </div>
       </div>
@@ -180,7 +181,10 @@ export default function HomePage() {
       </div>
 
       <div className="fixed bottom-24 right-4 flex flex-col gap-3 z-50">
-        <ScanButton />
+        <ScanButton 
+          categories={categories}
+          onTransactionAdded={fetchData}
+        />
         <Link
           href="/add"
           className="bg-blue-600 text-white p-3.5 rounded-full shadow-2xl hover:bg-blue-700 transition-all hover:scale-110 shadow-blue-500/20"

@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation';
 import { useSession } from 'next-auth/react';
 import LoadingScreen from '../components/LoadingScreen';
 import BackHomeButton from '../components/BackHomeButton';
+import { formatMoney } from '@/app/lib/formatMoney';
 
 type Category = {
   id: string;
@@ -393,13 +394,13 @@ export default function BudgetsPage() {
                     </div>
                     <div className="text-right">
                       <p className="text-sm text-gray-300">
-                        {budget.spentAmount.toFixed(2)} ₽ / {budget.limitAmount.toFixed(2)} ₽
+                        {formatMoney(budget.spentAmount)} / {formatMoney(budget.limitAmount)}
                       </p>
                       {isOverLimit ? (
                         <p className="text-xs text-red-400 font-medium">⚠️ Лимит превышен!</p>
                       ) : (
                         <p className="text-xs text-green-400">
-                          Осталось: {remaining.toFixed(2)} ₽
+                          Осталось: {formatMoney(remaining)}
                         </p>
                       )}
                     </div>
@@ -480,7 +481,7 @@ export default function BudgetsPage() {
                 </div>
                 <div className="text-right">
                   <p className="text-sm text-gray-400">
-                    {budget.spentAmount.toFixed(0)} / {budget.limitAmount.toFixed(0)} ₽
+                    {formatMoney(budget.spentAmount)} / {formatMoney(budget.limitAmount)}
                   </p>
                   <p className="text-xs text-gray-500">
                     {budget.period === 'monthly' ? '📆 Месяц' : '📅 Неделя'}

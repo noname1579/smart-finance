@@ -5,6 +5,7 @@ import { format, parseISO } from 'date-fns';
 import { ru } from 'date-fns/locale';
 import EditModal from './EditModal';
 import { useToast } from './ToastProvider';
+import { formatMoneyWithSign } from '@/app/lib/formatMoney';
 
 type Transaction = {
   id: string;
@@ -41,9 +42,10 @@ export default function TransactionList({ transactions, categories, onUpdate }: 
   
   const searchInputRef = useRef<HTMLInputElement>(null);
   
-  useEffect(() => {
-    searchInputRef.current?.focus();
-  }, []);
+  // ⭐ Убираем автофокус — теперь фокус только при клике на поле
+  // useEffect(() => {
+  //   searchInputRef.current?.focus();
+  // }, []);
 
   const filteredTransactions = useMemo(() => {
     return transactions
@@ -137,7 +139,8 @@ export default function TransactionList({ transactions, categories, onUpdate }: 
     setSearchQuery('');
     setFilterType('all');
     setFilterCategory('all');
-    setTimeout(() => searchInputRef.current?.focus(), 0);
+    // Убираем автофокус
+    // setTimeout(() => searchInputRef.current?.focus(), 0);
   };
 
   if (transactions.length === 0) {
@@ -167,7 +170,8 @@ export default function TransactionList({ transactions, categories, onUpdate }: 
               <button
                 onClick={() => {
                   setSearchQuery('');
-                  setTimeout(() => searchInputRef.current?.focus(), 0);
+                  // Убираем автофокус
+                  // setTimeout(() => searchInputRef.current?.focus(), 0);
                 }}
                 className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-white transition"
               >
@@ -269,7 +273,6 @@ export default function TransactionList({ transactions, categories, onUpdate }: 
             <button
               onClick={() => {
                 setSearchQuery('');
-                setTimeout(() => searchInputRef.current?.focus(), 0);
               }}
               className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-white transition"
             >
@@ -343,7 +346,7 @@ export default function TransactionList({ transactions, categories, onUpdate }: 
         {filteredTransactions.length > 0 && (
           <div className="text-right">
             <span className={`text-[10px] sm:text-xs ${totalFiltered >= 0 ? 'text-green-400' : 'text-red-400'}`}>
-              Итого: {totalFiltered >= 0 ? '+' : ''}{totalFiltered.toFixed(2)} ₽
+              Итого: {totalFiltered >= 0 ? '+' : ''}{formatMoneyWithSign(totalFiltered, totalFiltered < 0)}
             </span>
             <span className="text-[10px] sm:text-xs text-gray-500 ml-2">
               ({filteredTransactions.length})
@@ -366,7 +369,7 @@ export default function TransactionList({ transactions, categories, onUpdate }: 
                   {format(parseISO(date), 'dd MMMM yyyy', { locale: ru })}
                 </h3>
                 <span className={`text-[10px] sm:text-xs font-medium ${dayTotal >= 0 ? 'text-green-400' : 'text-red-400'}`}>
-                  {dayTotal >= 0 ? '+' : ''}{dayTotal.toFixed(2)} ₽
+                  {formatMoneyWithSign(dayTotal, dayTotal < 0)}
                 </span>
               </div>
               
@@ -381,7 +384,6 @@ export default function TransactionList({ transactions, categories, onUpdate }: 
                       className="glass-light rounded-xl p-2.5 sm:p-3 border border-white/5 hover:border-white/10 transition-all group"
                     >
                       <div className="flex items-center justify-between gap-2">
-                        {/* Левая часть: иконка + название + описание */}
                         <div className="flex items-center gap-2 sm:gap-3 flex-1 min-w-0">
                           <div 
                             className="w-8 h-8 sm:w-10 sm:h-10 rounded-xl flex items-center justify-center text-base sm:text-lg shrink-0"
@@ -411,13 +413,11 @@ export default function TransactionList({ transactions, categories, onUpdate }: 
                           </div>
                         </div>
 
-                        {/* Правая часть: СУММА + КНОПКИ ВСЕГДА ВИДНЫ */}
                         <div className="flex items-center gap-1 sm:gap-2 shrink-0 ml-auto">
                           <span className={`text-xs sm:text-sm font-semibold whitespace-nowrap ${isExpense ? 'text-red-400' : 'text-green-400'}`}>
-                            {isExpense ? '-' : '+'}{tx.amount.toFixed(2)} ₽
+                            {formatMoneyWithSign(tx.amount, isExpense)}
                           </span>
                           
-                          {/* ⭐ КНОПКИ ВСЕГДА ВИДНЫ — убрали opacity-0 group-hover */}
                           <div className="flex gap-0.5 sm:gap-1">
                             <button
                               onClick={() => {

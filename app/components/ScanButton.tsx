@@ -1,25 +1,70 @@
 'use client';
 
-import { useRef, useState } from 'react';
+import { useState } from 'react';
+import ScanReceiptModal from './ScanReceiptModal';
+import { useToast } from './ToastProvider';
 
-export default function ScanButton() {
-  const fileInputRef = useRef<HTMLInputElement>(null);
+type Category = {
+  id: string;
+  name: string;
+  icon: string;
+  color: string;
+  type: 'income' | 'expense';
+};
+
+type Props = {
+  categories: Category[];
+  onTransactionAdded?: () => void;
+};
+
+export default function ScanButton({ categories, onTransactionAdded }: Props) {
+  const { showToast } = useToast();
+  const [isModalOpen, setIsModalOpen] = useState(false);
   const [isScanning, setIsScanning] = useState(false);
 
   const handleScan = () => {
-    fileInputRef.current?.click();
+    setIsModalOpen(true);
   };
 
-  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (file) {
-      setIsScanning(true);
-      console.log('📸 Выбран файл для сканирования:', file.name);
+  const handleConfirm = async (data: {
+    amount: number;
+    categoryId: string;
+    description: string;
+    date: string;
+  }) => {
+    setIsScanning(true);
+    
+    try {
+      const response = await fetch('/api/transactions', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          amount: data.amount,
+          categoryId: data.categoryId,
+          description: data.description || 'Сканированный чек',
+          date: data.date,
+        }),
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || 'Ошибка создания транзакции');
+      }
+
+      showToast('✅ Транзакция из чека добавлена!', 'success');
+      setIsModalOpen(false);
       
-      setTimeout(() => {
-        setIsScanning(false);
-        alert('✅ Чек отсканирован! (заглушка)');
-      }, 1500);
+      if (onTransactionAdded) {
+        onTransactionAdded();
+      }
+      
+      // Перезагружаем страницу для обновления данных
+      window.location.reload();
+    } catch (error) {
+      console.error('Error creating transaction:', error);
+      showToast('❌ Ошибка добавления транзакции', 'error');
+    } finally {
+      setIsScanning(false);
     }
   };
 
@@ -28,7 +73,7 @@ export default function ScanButton() {
       <button
         onClick={handleScan}
         disabled={isScanning}
-        className={`relative bg-gradient-to-r from-purple-600 to-pink-600 text-white p-3.5 rounded-full shadow-2xl transition-all hover:scale-110 shadow-purple-500/20 ${
+        className={`relative bg-gradient-to-br from-purple-600 to-pink-600 text-white p-3.5 rounded-full shadow-2xl transition-all hover:scale-110 shadow-purple-500/20 ${
           isScanning ? 'animate-pulse opacity-50' : 'hover:shadow-purple-500/30'
         }`}
         title="Сканировать чек"
@@ -42,13 +87,12 @@ export default function ScanButton() {
           </svg>
         )}
       </button>
-      <input
-        type="file"
-        accept="image/*"
-        capture="environment"
-        ref={fileInputRef}
-        onChange={handleFileChange}
-        className="hidden"
+
+      <ScanReceiptModal
+        isOpen={isModalOpen}
+        onClose={() => setIsModalOpen(false)}
+        onConfirm={handleConfirm}
+        categories={categories}
       />
     </>
   );
