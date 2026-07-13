@@ -238,3 +238,74 @@ html {
     transform: translateY(-15px);
   }
 }
+
+/* Мобильная адаптация */
+@media (max-width: 640px) {
+  /* Уменьшаем отступы */
+  .p-4 {
+    padding: 0.75rem;
+  }
+  
+  /* Уменьшаем шрифты */
+  .text-2xl {
+    font-size: 1.25rem;
+  }
+  
+  /* Улучшаем тач-таргеты */
+  button, 
+  a,
+  select,
+  input[type="date"],
+  input[type="number"],
+  input[type="text"] {
+    min-height: 44px;
+  }
+  
+  /* Улучшаем навигацию */
+  .glass {
+    backdrop-filter: blur(8px);
+    -webkit-backdrop-filter: blur(8px);
+  }
+  
+  /* Карточки в 1 колонку */
+  .grid-cols-2 {
+    grid-template-columns: 1fr !important;
+  }
+  
+  /* Уменьшаем отступы в карточках */
+  .glass .p-4 {
+    padding: 0.75rem;
+  }
+  
+  /* Улучшаем видимость текста */
+  .text-xs {
+    font-size: 0.65rem;
+  }
+  
+  /* Улучшаем кнопки фильтров */
+  .flex-wrap .glass {
+    padding: 0.4rem 0.6rem;
+    font-size: 0.65rem;
+  }
+  
+  /* Уменьшаем иконки */
+  .text-xl {
+    font-size: 1rem;
+  }
+  
+  /* Улучшаем выбор категорий в /add */
+  .grid-cols-6 {
+    grid-template-columns: repeat(4, 1fr) !important;
+  }
+}
+
+/* Планшеты */
+@media (min-width: 641px) and (max-width: 1024px) {
+  .grid-cols-2 {
+    grid-template-columns: 1fr 1fr;
+  }
+  
+  .grid-cols-6 {
+    grid-template-columns: repeat(5, 1fr) !important;
+  }
+}
