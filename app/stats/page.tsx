@@ -150,7 +150,6 @@ export default function StatsPage() {
   const hasExpenses = dayStats.some(d => d.total > 0);
   const weekTotal = dayStats.reduce((sum, d) => sum + d.total, 0);
 
-  // Находим минимальный и максимальный расход
   const expenses = dayStats.filter(d => d.total > 0);
   const maxExpense = expenses.length > 0 ? Math.max(...expenses.map(d => d.total)) : 0;
 
@@ -188,7 +187,7 @@ export default function StatsPage() {
         </p>
       </div>
 
-      {/* 📈 ГРАФИК РАСХОДОВ ЗА НЕДЕЛЮ — БЕЗ ПОДСВЕТКИ */}
+      {/* 📈 ГРАФИК РАСХОДОВ ЗА НЕДЕЛЮ — ДАТЫ СВЕТЛЕЕ */}
       <div className="glass rounded-2xl p-5 border border-white/5">
         <div className="flex justify-between items-center mb-4">
           <h2 className="text-sm font-semibold text-gray-300">📈 Расходы за неделю</h2>
@@ -211,7 +210,6 @@ export default function StatsPage() {
               {dayStats.map((day, index) => {
                 const height = day.total > 0 ? (day.total / maxDayTotal) * 100 : 0;
                 
-                // 🔴🟢 ТОЛЬКО ЗЕЛЁНЫЙ И КРАСНЫЙ (без подсветки)
                 let colorStyle = {};
                 if (day.total === 0) {
                   colorStyle = { backgroundColor: 'rgba(255,255,255,0.05)', height: '4px' };
@@ -243,12 +241,12 @@ export default function StatsPage() {
                       }}
                     />
                     
-                    {/* Подпись */}
+                    {/* Подпись — ДАТЫ СВЕТЛЕЕ */}
                     <div className="text-center">
-                      <span className="text-[10px] text-gray-500">
+                      <span className="text-[10px] text-gray-300">
                         {day.dayOfWeek}
                       </span>
-                      <span className="text-[8px] text-gray-600 block">
+                      <span className="text-[8px] text-gray-400 block">
                         {day.day} {day.month}
                       </span>
                     </div>

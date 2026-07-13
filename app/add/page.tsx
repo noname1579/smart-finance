@@ -27,18 +27,16 @@ export default function AddPage() {
   const [description, setDescription] = useState('');
   const [date, setDate] = useState('');
   const [error, setError] = useState('');
+  const [isExpense, setIsExpense] = useState(true);
 
-  // Функция загрузки категорий
   const fetchCategories = useCallback(async () => {
     try {
       const res = await fetch('/api/categories');
-      console.log('📂 Ответ от API /categories:', res.status);
       
       if (!res.ok) throw new Error('Ошибка загрузки категорий');
       
       const data = await res.json();
       console.log('📂 Загружено категорий:', data.length);
-      
       setCategories(data);
     } catch (error) {
       console.error('Error fetching categories:', error);
@@ -112,6 +110,19 @@ export default function AddPage() {
     }
   };
 
+  const expenseCategories = categories.filter(cat => cat.type === 'expense');
+  const incomeCategories = categories.filter(cat => cat.type === 'income');
+
+  const handleTypeSwitch = (type: 'expense' | 'income') => {
+    setIsExpense(type === 'expense');
+    const cats = type === 'expense' ? expenseCategories : incomeCategories;
+    if (cats.length > 0) {
+      setCategoryId(cats[0].id);
+    } else {
+      setCategoryId('');
+    }
+  };
+
   if (status === 'loading' || isLoading) {
     return <LoadingScreen />;
   }
@@ -130,6 +141,7 @@ export default function AddPage() {
       )}
       
       <form onSubmit={handleSubmit} className="space-y-5">
+        {/* Сумма */}
         <div>
           <label className="block text-sm font-medium text-gray-300 mb-1.5">
             💰 Сумма (₽)
@@ -150,36 +162,96 @@ export default function AddPage() {
           <p className="text-xs text-gray-500 mt-1">Минимальная сумма: 0.01 ₽</p>
         </div>
 
+        {/* Переключатель типа — понятные цвета */}
         <div>
           <label className="block text-sm font-medium text-gray-300 mb-1.5">
-            📂 Категория
+            📊 Тип транзакции
           </label>
-          <select
-            value={categoryId}
-            onChange={(e) => {
-              setCategoryId(e.target.value);
-              setError('');
-            }}
-            className="glass w-full rounded-xl border border-white/10 p-3.5 text-white text-base bg-transparent focus:outline-none focus:border-blue-500/50 transition appearance-none cursor-pointer"
-            required
-          >
-            <option value="" className="bg-[#0a0a0f]">Выберите категорию</option>
-            {categories.length === 0 ? (
-              <option value="" disabled className="bg-[#0a0a0f] text-gray-500">
-                ⚠️ Нет категорий. Создайте их в разделе "Категории"
-              </option>
-            ) : (
-              categories.map(cat => (
-                <option key={cat.id} value={cat.id} className="bg-[#0a0a0f]">
-                  {cat.icon} {cat.name} ({cat.type === 'income' ? '📈 Доход' : '📉 Расход'})
-                </option>
-              ))
-            )}
-          </select>
-          <div className="flex justify-between mt-1">
-            <p className="text-xs text-gray-500">
-              {categories.length} категорий
+          <div className="flex gap-2">
+            <button
+              type="button"
+              onClick={() => handleTypeSwitch('expense')}
+              className={`flex-1 py-2.5 rounded-xl text-sm font-medium transition-all duration-200 ${
+                isExpense
+                  ? 'bg-gradient-to-r from-red-600 to-red-500 text-white shadow-lg shadow-red-500/20 scale-[1.02]'
+                  : 'glass-light text-gray-400 hover:text-white hover:bg-white/5'
+              }`}
+            >
+              <span className="flex items-center justify-center gap-1">
+                <span>📉</span> Расход
+              </span>
+            </button>
+            <button
+              type="button"
+              onClick={() => handleTypeSwitch('income')}
+              className={`flex-1 py-2.5 rounded-xl text-sm font-medium transition-all duration-200 ${
+                !isExpense
+                  ? 'bg-gradient-to-r from-green-600 to-green-500 text-white shadow-lg shadow-green-500/20 scale-[1.02]'
+                  : 'glass-light text-gray-400 hover:text-white hover:bg-white/5'
+              }`}
+            >
+              <span className="flex items-center justify-center gap-1">
+                <span>📈</span> Доход
+              </span>
+            </button>
+          </div>
+          <p className="text-xs text-gray-500 mt-1">
+            {isExpense ? '🔴 Выбран режим "Расход"' : '🟢 Выбран режим "Доход"'}
+          </p>
+        </div>
+
+        {/* Категория */}
+        <div>
+          <label className="block text-sm font-medium text-gray-300 mb-1.5">
+            📂 Категория {isExpense ? '(расход)' : '(доход)'}
+          </label>
+          
+          {categories.length === 0 ? (
+            <div className="glass rounded-xl p-4 border border-yellow-500/30 bg-yellow-500/10 text-center">
+              <p className="text-yellow-400 text-sm">⚠️ Нет категорий</p>
+              <button
+                type="button"
+                onClick={() => router.push('/categories')}
+                className="mt-2 text-xs text-blue-400 hover:text-blue-300 transition"
+              >
+                + Создать категорию
+              </button>
+            </div>
+          ) : (
+            <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-6 gap-2">
+              {(isExpense ? expenseCategories : incomeCategories).map((cat) => (
+                <button
+                  key={cat.id}
+                  type="button"
+                  onClick={() => {
+                    setCategoryId(cat.id);
+                    setError('');
+                  }}
+                  className={`glass rounded-xl p-2.5 transition-all duration-200 ${
+                    categoryId === cat.id
+                      ? 'border border-blue-500/50 bg-blue-500/10 shadow-lg shadow-blue-500/20 scale-[1.02]'
+                      : 'border border-white/5 hover:border-white/20 hover:bg-white/5'
+                  }`}
+                >
+                  <div className="flex flex-col items-center gap-0.5">
+                    <span className="text-xl">{cat.icon}</span>
+                    <span className="text-[10px] text-gray-400 text-center leading-tight">{cat.name}</span>
+                    {categoryId === cat.id && (
+                      <div className="w-3 h-0.5 bg-gradient-to-r from-blue-500 to-purple-500 rounded-full mt-0.5" />
+                    )}
+                  </div>
+                </button>
+              ))}
+            </div>
+          )}
+          
+          {categoryId && (
+            <p className="text-xs text-blue-400 mt-2">
+              ✅ Выбрана: {categories.find(c => c.id === categoryId)?.icon} {categories.find(c => c.id === categoryId)?.name}
             </p>
+          )}
+          
+          <div className="flex justify-between mt-2">
             <button
               type="button"
               onClick={() => {
@@ -189,9 +261,17 @@ export default function AddPage() {
             >
               + Управлять категориями
             </button>
+            <button
+              type="button"
+              onClick={fetchCategories}
+              className="text-xs text-gray-400 hover:text-white transition"
+            >
+              🔄 Обновить список
+            </button>
           </div>
         </div>
 
+        {/* Описание */}
         <div>
           <label className="block text-sm font-medium text-gray-300 mb-1.5">
             📝 Описание
@@ -206,6 +286,7 @@ export default function AddPage() {
           <p className="text-xs text-gray-500 mt-1">Необязательное поле</p>
         </div>
 
+        {/* Дата */}
         <div>
           <label className="block text-sm font-medium text-gray-300 mb-1.5">
             📅 Дата
@@ -219,11 +300,16 @@ export default function AddPage() {
           />
         </div>
 
+        {/* Кнопка отправки — цвет зависит от типа */}
         <button
           type="submit"
-          className="w-full bg-gradient-to-r from-blue-600 to-blue-500 text-white py-3.5 px-4 rounded-xl font-semibold text-base shadow-lg shadow-blue-500/20 hover:shadow-blue-500/30 transition-all hover:scale-[1.02] active:scale-[0.98]"
+          className={`w-full py-3.5 px-4 rounded-xl font-semibold text-base transition-all hover:scale-[1.02] active:scale-[0.98] shadow-lg ${
+            isExpense
+              ? 'bg-gradient-to-r from-red-600 to-red-500 text-white shadow-red-500/20 hover:shadow-red-500/30'
+              : 'bg-gradient-to-r from-green-600 to-green-500 text-white shadow-green-500/20 hover:shadow-green-500/30'
+          }`}
         >
-          ✅ Добавить транзакцию
+          {isExpense ? '✅ Добавить расход' : '✅ Добавить доход'}
         </button>
       </form>
     </div>

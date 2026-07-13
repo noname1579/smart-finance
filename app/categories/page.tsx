@@ -2,9 +2,10 @@
 
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
-import { getFromStorage, setToStorage } from '../lib/storage';
-import { v4 as uuidv4 } from 'uuid';
+import { useSession } from 'next-auth/react';
 import LoadingScreen from '../components/LoadingScreen';
+import BackHomeButton from '../components/BackHomeButton';
+import { useToast } from '../components/ToastProvider';
 
 type Category = {
   id: string;
@@ -12,22 +13,16 @@ type Category = {
   icon: string;
   color: string;
   type: 'income' | 'expense';
+  isSystem: boolean;
 };
-
-const defaultCategories: Category[] = [
-  { id: 'food', name: 'Еда', icon: '🍔', color: '#FF6384', type: 'expense' },
-  { id: 'transport', name: 'Транспорт', icon: '🚗', color: '#36A2EB', type: 'expense' },
-  { id: 'housing', name: 'Жильё', icon: '🏠', color: '#FFCE56', type: 'expense' },
-  { id: 'entertainment', name: 'Развлечения', icon: '🎮', color: '#4BC0C0', type: 'expense' },
-  { id: 'salary', name: 'Зарплата', icon: '💰', color: '#FF9F40', type: 'income' },
-  { id: 'other', name: 'Прочее', icon: '📦', color: '#9966FF', type: 'expense' },
-];
 
 const POPULAR_ICONS = ['🍔', '🚗', '🏠', '🎮', '💰', '📦', '🛒', '☕', '🍕', '🎬', '✈️', '🏥', '📚', '🎵', '👕', '💄', '🔧', '🎁', '🏋️', '🧘'];
 
 export default function CategoriesPage() {
   const router = useRouter();
-  const [categories, setCategories] = useState<Category[]>(defaultCategories);
+  const { data: session, status } = useSession();
+  const { showToast } = useToast();
+  const [categories, setCategories] = useState<Category[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   
   const [newCategory, setNewCategory] = useState({
@@ -40,63 +35,87 @@ export default function CategoriesPage() {
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editData, setEditData] = useState<Category | null>(null);
 
-  useEffect(() => {
-    const saved = getFromStorage<Category[]>('categories', defaultCategories);
-    setCategories(saved);
-    setIsLoading(false);
-  }, []);
-
-  useEffect(() => {
-    if (!isLoading) {
-      setToStorage('categories', categories);
+  const fetchCategories = async () => {
+    try {
+      const res = await fetch('/api/categories');
+      if (!res.ok) throw new Error('Ошибка загрузки');
+      const data = await res.json();
+      console.log('📂 Загружено категорий:', data.length);
+      setCategories(data);
+    } catch (error) {
+      console.error('Error fetching categories:', error);
+      showToast('❌ Ошибка загрузки категорий', 'error');
+    } finally {
+      setIsLoading(false);
     }
-  }, [categories, isLoading]);
+  };
 
-  const handleAddCategory = (e: React.FormEvent) => {
+  useEffect(() => {
+    if (status === 'unauthenticated') {
+      router.push('/auth/login');
+      return;
+    }
+
+    if (session) {
+      fetchCategories();
+    }
+  }, [session, status]);
+
+  const handleAddCategory = async (e: React.FormEvent) => {
     e.preventDefault();
     
     if (!newCategory.name.trim()) {
-      alert('Введите название категории');
+      showToast('⚠️ Введите название категории', 'warning');
       return;
     }
 
-    const exists = categories.some(c => 
-      c.name.toLowerCase() === newCategory.name.trim().toLowerCase()
-    );
-    if (exists) {
-      alert('Категория с таким названием уже существует');
-      return;
-    }
+    console.log('📝 Отправка запроса на создание:', newCategory);
 
-    const newCat: Category = {
-      id: uuidv4(),
-      name: newCategory.name.trim(),
-      icon: newCategory.icon,
-      color: newCategory.color,
-      type: newCategory.type,
-    };
+    try {
+      const res = await fetch('/api/categories', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(newCategory),
+      });
 
-    setCategories([...categories, newCat]);
-    setNewCategory({
-      name: '',
-      icon: '📌',
-      color: '#36A2EB',
-      type: 'expense'
-    });
-  };
+      const data = await res.json();
+      console.log('📝 Ответ сервера:', data);
 
-  const handleDeleteCategory = (id: string) => {
-    const transactions = getFromStorage<any[]>('transactions', []);
-    const isUsed = transactions.some(tx => tx.categoryId === id);
-    
-    if (isUsed) {
-      if (!confirm('❌ Эта категория используется в транзакциях. Удалить нельзя, так как это нарушит целостность данных.')) {
+      if (!res.ok) {
+        showToast(data.error || 'Ошибка создания', 'error');
         return;
       }
+
+      setCategories([...categories, data]);
+      setNewCategory({
+        name: '',
+        icon: '📌',
+        color: '#36A2EB',
+        type: 'expense'
+      });
+      showToast('✅ Категория создана!', 'success');
+    } catch (error) {
+      console.error('❌ Ошибка:', error);
+      showToast('❌ Ошибка создания категории', 'error');
     }
-    
-    if (confirm(`Удалить категорию "${categories.find(c => c.id === id)?.name}"?`)) {
+  };
+
+  const handleDeleteCategory = async (id: string) => {
+    if (!confirm('Удалить категорию?')) return;
+
+    try {
+      const res = await fetch(`/api/categories?id=${id}`, { method: 'DELETE' });
+      
+      if (!res.ok) {
+        const data = await res.json();
+        showToast(data.error || 'Ошибка удаления', 'error');
+        return;
+      }
+
       setCategories(categories.filter(c => c.id !== id));
+      showToast('🗑️ Категория удалена', 'success');
+    } catch (error) {
+      showToast('❌ Ошибка удаления', 'error');
     }
   };
 
@@ -105,18 +124,31 @@ export default function CategoriesPage() {
     setEditData({ ...cat });
   };
 
-  const saveEditing = () => {
+  const saveEditing = async () => {
     if (!editData) return;
     if (!editData.name.trim()) {
-      alert('Введите название категории');
+      showToast('⚠️ Введите название', 'warning');
       return;
     }
 
-    setCategories(categories.map(c => 
-      c.id === editingId ? editData : c
-    ));
-    setEditingId(null);
-    setEditData(null);
+    try {
+      const res = await fetch('/api/categories', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(editData),
+      });
+
+      if (!res.ok) throw new Error('Ошибка обновления');
+
+      setCategories(categories.map(c => 
+        c.id === editingId ? editData : c
+      ));
+      setEditingId(null);
+      setEditData(null);
+      showToast('✅ Категория обновлена', 'success');
+    } catch (error) {
+      showToast('❌ Ошибка обновления', 'error');
+    }
   };
 
   const cancelEditing = () => {
@@ -124,26 +156,18 @@ export default function CategoriesPage() {
     setEditData(null);
   };
 
-  if (isLoading) {
+  if (status === 'loading' || isLoading) {
     return <LoadingScreen />;
   }
 
   return (
     <div className="p-4 space-y-6 max-w-4xl mx-auto pb-24">
-      <div className="flex items-center gap-3 pt-4">
-        <button 
-          onClick={() => router.back()}
-          className="glass rounded-full p-2 hover:bg-white/5 transition"
-        >
-          <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
-          </svg>
-        </button>
-        <h1 className="text-2xl font-bold gradient-text">
-          📂 Управление категориями
-        </h1>
+      <div className="flex items-center justify-between pt-4">
+        <h1 className="text-2xl font-bold gradient-text">📂 Управление категориями</h1>
+        <BackHomeButton />
       </div>
 
+      {/* Форма добавления */}
       <div className="glass rounded-2xl p-5 border border-white/5">
         <h2 className="text-sm font-semibold text-gray-300 mb-4">➕ Новая категория</h2>
         
@@ -223,12 +247,21 @@ export default function CategoriesPage() {
         </form>
       </div>
 
+      {/* Список категорий */}
       <div className="glass rounded-2xl p-5 border border-white/5">
-        <h2 className="text-sm font-semibold text-gray-300 mb-4">📋 Все категории</h2>
+        <div className="flex justify-between items-center mb-4">
+          <h2 className="text-sm font-semibold text-gray-300">📋 Все категории</h2>
+          <button
+            onClick={fetchCategories}
+            className="text-xs text-blue-400 hover:text-blue-300 transition"
+          >
+            🔄 Обновить
+          </button>
+        </div>
         
         <div className="space-y-2">
-          {categories.map(cat => {
-            const isSystem = ['food', 'transport', 'housing', 'entertainment', 'salary', 'other'].includes(cat.id);
+          {categories.map((cat) => {
+            const isSystem = cat.isSystem;
             
             return (
               <div 
@@ -316,7 +349,7 @@ export default function CategoriesPage() {
         </div>
         
         <p className="text-xs text-gray-500 mt-3 text-center">
-          💡 Системные категории (🔒) нельзя удалить
+          {categories.length} категорий • 🔒 Системные категории нельзя удалить
         </p>
       </div>
     </div>

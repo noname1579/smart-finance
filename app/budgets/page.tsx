@@ -317,7 +317,7 @@ export default function BudgetsPage() {
             type="submit"
             className="w-full bg-gradient-to-r from-blue-600 to-blue-500 text-white py-3 rounded-xl font-medium hover:shadow-lg hover:shadow-blue-500/20 transition-all hover:scale-[1.02] active:scale-[0.98]"
           >
-            ➕ Создать бюджет
+            Создать бюджет
           </button>
         </form>
       </div>

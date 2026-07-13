@@ -2,6 +2,7 @@
 
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
+import { useSession } from 'next-auth/react';
 
 const navItems = [
   { href: '/', icon: '🏠', label: 'Главная' },
@@ -13,8 +14,16 @@ const navItems = [
 
 export default function Navigation() {
   const pathname = usePathname();
+  const { data: session } = useSession();
 
   const isAuthPage = pathname?.startsWith('/auth/');
+  const isAdmin = session?.user?.role === 'admin';
+
+  let items = [...navItems];
+
+  if (isAdmin) {
+    items.push({ href: '/admin', icon: '🛡️', label: 'Админ' });
+  }
 
   if (isAuthPage) {
     return null;
@@ -22,8 +31,8 @@ export default function Navigation() {
 
   return (
     <nav className="fixed bottom-4 left-4 right-4 sm:left-1/2 sm:right-auto sm:-translate-x-1/2 glass rounded-2xl border border-white/10 shadow-2xl backdrop-blur-xl sm:w-auto sm:min-w-[400px] sm:max-w-[600px] z-50">
-      <div className="flex justify-around items-center py-2 px-4 relative">
-        {navItems.map((item) => {
+      <div className="flex justify-around items-center py-2 px-4">
+        {items.map((item) => {
           const isActive = pathname === item.href;
           
           return (

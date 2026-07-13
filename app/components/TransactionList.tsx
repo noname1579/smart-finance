@@ -3,8 +3,8 @@
 import { useState } from 'react';
 import { format, parseISO } from 'date-fns';
 import { ru } from 'date-fns/locale';
-import { useToast } from './ToastProvider';
 import EditModal from './EditModal';
+import { useToast } from './ToastProvider';
 
 type Transaction = {
   id: string;
@@ -85,6 +85,12 @@ export default function TransactionList({ transactions, categories, onUpdate }: 
     }
   };
 
+  // ⭐ Функция для определения типа транзакции
+  const getTransactionType = (tx: Transaction) => {
+    const cat = categories.find(c => c.id === tx.categoryId);
+    return cat?.type === 'income' ? 'income' : 'expense';
+  };
+
   if (sorted.length === 0) {
     return (
       <div className="text-center py-8">
@@ -99,9 +105,10 @@ export default function TransactionList({ transactions, categories, onUpdate }: 
     <>
       <div className="space-y-4">
         {Object.entries(grouped).map(([date, txs]) => {
+          // Считаем сумму за день (доходы +, расходы -)
           const dayTotal = txs.reduce((sum, tx) => {
-            const cat = categories.find(c => c.id === tx.categoryId);
-            return cat?.type === 'expense' ? sum + tx.amount : sum - tx.amount;
+            const type = getTransactionType(tx);
+            return type === 'income' ? sum + tx.amount : sum - tx.amount;
           }, 0);
 
           return (

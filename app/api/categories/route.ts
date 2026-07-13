@@ -16,6 +16,7 @@ export async function GET() {
     orderBy: { createdAt: 'asc' },
   });
 
+  console.log('📂 GET /api/categories — найдено:', categories.length);
   return NextResponse.json(categories);
 }
 
@@ -29,6 +30,8 @@ export async function POST(request: Request) {
 
   try {
     const body = await request.json();
+    console.log('📝 POST /api/categories — тело запроса:', body);
+    
     const { name, icon, color, type } = body;
 
     if (!name || !type) {
@@ -64,11 +67,12 @@ export async function POST(request: Request) {
       },
     });
 
+    console.log('✅ Категория создана:', category);
     return NextResponse.json(category, { status: 201 });
   } catch (error) {
-    console.error('Category creation error:', error);
+    console.error('❌ Ошибка создания категории:', error);
     return NextResponse.json(
-      { error: 'Ошибка создания категории' },
+      { error: 'Внутренняя ошибка сервера' },
       { status: 500 }
     );
   }
@@ -93,7 +97,6 @@ export async function DELETE(request: Request) {
       );
     }
 
-    // Проверяем, что категория принадлежит пользователю
     const category = await prisma.category.findFirst({
       where: { id, userId: session.user.id },
     });
@@ -105,7 +108,6 @@ export async function DELETE(request: Request) {
       );
     }
 
-    // Проверяем, используется ли категория в транзакциях
     const transactions = await prisma.transaction.findFirst({
       where: { categoryId: id },
     });
@@ -118,12 +120,61 @@ export async function DELETE(request: Request) {
     }
 
     await prisma.category.delete({ where: { id } });
-
     return NextResponse.json({ message: 'Категория удалена' });
   } catch (error) {
-    console.error('Category deletion error:', error);
+    console.error('❌ Ошибка удаления категории:', error);
     return NextResponse.json(
       { error: 'Ошибка удаления категории' },
+      { status: 500 }
+    );
+  }
+}
+
+// PUT — обновить категорию
+export async function PUT(request: Request) {
+  const session = await getServerSession(authOptions);
+
+  if (!session) {
+    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+  }
+
+  try {
+    const body = await request.json();
+    const { id, name, icon, color, type } = body;
+
+    if (!id || !name || !type) {
+      return NextResponse.json(
+        { error: 'ID, название и тип обязательны' },
+        { status: 400 }
+      );
+    }
+
+    const category = await prisma.category.findFirst({
+      where: { id, userId: session.user.id },
+    });
+
+    if (!category) {
+      return NextResponse.json(
+        { error: 'Категория не найдена' },
+        { status: 404 }
+      );
+    }
+
+    const updated = await prisma.category.update({
+      where: { id },
+      data: {
+        name,
+        icon: icon || '📌',
+        color: color || '#8884d8',
+        type,
+      },
+    });
+
+    return NextResponse.json(updated);
+  } catch (error) {
+    console.error('❌ Ошибка обновления категории:', error);
+    return NextResponse.json(
+      { error: 'Ошибка обновления категории' },
       { status: 500 }
     );
   }
