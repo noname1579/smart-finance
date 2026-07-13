@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation';
 import { useSession } from 'next-auth/react';
 import CategoryPieChart from '../components/CategoryPieChart';
 import LoadingScreen from '../components/LoadingScreen';
+import BackHomeButton from '../components/BackHomeButton';
 
 type Category = {
   id: string;
@@ -117,42 +118,51 @@ export default function StatsPage() {
     .sort((a, b) => a[0].localeCompare(b[0]))
     .slice(-6);
 
+  // 📊 ГРАФИК РАСХОДОВ ЗА НЕДЕЛЮ
   const now = new Date();
+  
   const dayStats = Array.from({ length: 7 }, (_, i) => {
     const d = new Date(now);
-    d.setDate(d.getDate() - (6 - i));
+    d.setDate(now.getDate() - (6 - i));
     const dateStr = d.toISOString().split('T')[0];
-    const total = transactions
-      .filter(tx => {
-        const cat = categories.find(c => c.id === tx.categoryId);
-        return cat?.type === 'expense' && tx.date === dateStr;
-      })
-      .reduce((sum, tx) => sum + (tx.amount || 0), 0);
+    
+    const dayExpenses = transactions.filter(tx => {
+      const cat = categories.find(c => c.id === tx.categoryId);
+      const isExpense = cat?.type === 'expense';
+      const txDate = new Date(tx.date).toISOString().split('T')[0];
+      return isExpense && txDate === dateStr;
+    });
+    
+    const total = dayExpenses.reduce((sum, tx) => sum + tx.amount, 0);
+    
     return {
       date: dateStr,
       day: d.getDate(),
       month: d.toLocaleString('ru', { month: 'short' }),
-      total
+      total,
+      dayOfWeek: d.toLocaleString('ru', { weekday: 'short' }),
+      isToday: dateStr === now.toISOString().split('T')[0],
     };
   });
 
   const maxDayTotal = Math.max(...dayStats.map(d => d.total), 1);
+  const average = dayStats.reduce((sum, d) => sum + d.total, 0) / 7;
+  const hasExpenses = dayStats.some(d => d.total > 0);
+  const weekTotal = dayStats.reduce((sum, d) => sum + d.total, 0);
+
+  // Находим минимальный и максимальный расход
+  const expenses = dayStats.filter(d => d.total > 0);
+  const maxExpense = expenses.length > 0 ? Math.max(...expenses.map(d => d.total)) : 0;
 
   return (
     <div className="p-4 space-y-6 max-w-4xl mx-auto pb-24">
-      {/* Шапка - только стрелка и заголовок */}
-      <div className="flex items-center gap-3 pt-4">
-        <button 
-          onClick={() => router.back()}
-          className="glass rounded-full p-2 hover:bg-white/5 transition"
-        >
-          <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
-          </svg>
-        </button>
-        <h1 className="text-2xl font-bold gradient-text">Статистика</h1>
+      {/* Header */}
+      <div className="flex items-center justify-between pt-4">
+        <h1 className="text-2xl font-bold gradient-text">📊 Статистика</h1>
+        <BackHomeButton />
       </div>
 
+      {/* Total Cards */}
       <div className="grid grid-cols-2 gap-3">
         <div className="glass rounded-2xl p-4 border border-white/5 hover-scale">
           <p className="text-xs text-gray-400">💰 Доходы</p>
@@ -168,6 +178,7 @@ export default function StatsPage() {
         </div>
       </div>
 
+      {/* Balance */}
       <div className="glass rounded-2xl p-5 border border-white/5 glow">
         <p className="text-xs text-gray-400">Остаток</p>
         <p className={`text-2xl font-bold ${
@@ -177,35 +188,123 @@ export default function StatsPage() {
         </p>
       </div>
 
+      {/* 📈 ГРАФИК РАСХОДОВ ЗА НЕДЕЛЮ — БЕЗ ПОДСВЕТКИ */}
       <div className="glass rounded-2xl p-5 border border-white/5">
-        <h2 className="text-sm font-semibold text-gray-300 mb-4">📈 Расходы за неделю</h2>
-        <div className="flex items-end gap-2 h-32">
-          {dayStats.map((day, index) => {
-            const height = day.total > 0 ? (day.total / maxDayTotal) * 100 : 0;
-            return (
-              <div key={index} className="flex-1 flex flex-col items-center gap-1">
+        <div className="flex justify-between items-center mb-4">
+          <h2 className="text-sm font-semibold text-gray-300">📈 Расходы за неделю</h2>
+          {hasExpenses && (
+            <span className="text-xs text-gray-500">
+              Всего: <span className="text-gray-300">{weekTotal.toFixed(0)} ₽</span>
+            </span>
+          )}
+        </div>
+
+        {!hasExpenses ? (
+          <div className="text-center py-8">
+            <p className="text-sm text-gray-500">Нет расходов за эту неделю</p>
+            <p className="text-xs text-gray-600 mt-1">Добавьте первую трату</p>
+          </div>
+        ) : (
+          <div className="space-y-4">
+            {/* График */}
+            <div className="flex items-end gap-2 h-40">
+              {dayStats.map((day, index) => {
+                const height = day.total > 0 ? (day.total / maxDayTotal) * 100 : 0;
+                
+                // 🔴🟢 ТОЛЬКО ЗЕЛЁНЫЙ И КРАСНЫЙ (без подсветки)
+                let colorStyle = {};
+                if (day.total === 0) {
+                  colorStyle = { backgroundColor: 'rgba(255,255,255,0.05)', height: '4px' };
+                } else {
+                  const ratio = day.total / maxExpense;
+                  
+                  if (ratio < 0.3) {
+                    colorStyle = { background: 'linear-gradient(to top, #22c55e, #4ade80)' };
+                  } else if (ratio < 0.6) {
+                    colorStyle = { background: 'linear-gradient(to top, #eab308, #facc15)' };
+                  } else {
+                    colorStyle = { background: 'linear-gradient(to top, #ef4444, #f87171)' };
+                  }
+                }
+                
+                return (
+                  <div key={index} className="flex-1 flex flex-col items-center gap-1">
+                    {/* Сумма над столбцом */}
+                    <span className={`text-[10px] ${day.total > 0 ? 'text-gray-300 font-medium' : 'text-gray-600'}`}>
+                      {day.total > 0 ? `${day.total.toFixed(0)} ₽` : ''}
+                    </span>
+                    
+                    {/* Столбец */}
+                    <div 
+                      className="w-full max-w-[40px] rounded-t-lg transition-all duration-500"
+                      style={{ 
+                        height: day.total > 0 ? `${Math.max(height * 0.85, 4)}px` : '4px',
+                        ...colorStyle
+                      }}
+                    />
+                    
+                    {/* Подпись */}
+                    <div className="text-center">
+                      <span className="text-[10px] text-gray-500">
+                        {day.dayOfWeek}
+                      </span>
+                      <span className="text-[8px] text-gray-600 block">
+                        {day.day} {day.month}
+                      </span>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+
+            {/* Линия тренда */}
+            <div className="relative pt-2">
+              <div className="flex justify-between items-center">
+                <span className="text-[10px] text-gray-500">Мин</span>
+                <span className="text-[10px] text-gray-500">Макс</span>
+              </div>
+              <div className="w-full h-1 bg-white/5 rounded-full overflow-hidden mt-1">
                 <div 
-                  className="w-full rounded-lg transition-all duration-500"
+                  className="h-full bg-gradient-to-r from-green-500 via-yellow-500 to-red-500 rounded-full transition-all duration-1000"
                   style={{ 
-                    height: `${Math.max(height * 0.9, 4)}%`,
-                    background: day.total > 0 
-                      ? `linear-gradient(180deg, #3b82f6, ${day.total / maxDayTotal > 0.5 ? '#60a5fa' : '#93c5fd'})`
-                      : 'rgba(255,255,255,0.05)'
+                    width: `${(maxExpense / maxDayTotal) * 100}%` 
                   }}
                 />
-                <span className="text-[10px] text-gray-500">{day.day}</span>
-                <span className="text-[8px] text-gray-600">{day.month}</span>
               </div>
-            );
-          })}
-        </div>
+            </div>
+
+            {/* Сводка по неделе */}
+            <div className="grid grid-cols-3 gap-2 pt-2 border-t border-white/5">
+              <div className="text-center">
+                <p className="text-[10px] text-gray-500">Всего</p>
+                <p className="text-sm font-semibold text-white">
+                  {weekTotal.toFixed(0)} ₽
+                </p>
+              </div>
+              <div className="text-center">
+                <p className="text-[10px] text-gray-500">Средний</p>
+                <p className="text-sm font-semibold text-gray-300">
+                  {average.toFixed(0)} ₽
+                </p>
+              </div>
+              <div className="text-center">
+                <p className="text-[10px] text-gray-500">Максимум</p>
+                <p className="text-sm font-semibold text-red-400">
+                  {maxExpense.toFixed(0)} ₽
+                </p>
+              </div>
+            </div>
+          </div>
+        )}
       </div>
 
+      {/* Расходы по категориям */}
       <div className="glass rounded-2xl p-5 border border-white/5">
         <h2 className="text-sm font-semibold mb-3 text-gray-300">Расходы по категориям</h2>
         <CategoryPieChart transactions={transactions} categories={categories} />
       </div>
 
+      {/* Топ категорий */}
       {categoryStats.length > 0 && (
         <div className="glass rounded-2xl p-5 border border-white/5">
           <h2 className="text-sm font-semibold mb-3 text-gray-300">🏆 Топ категорий</h2>
@@ -243,6 +342,7 @@ export default function StatsPage() {
         </div>
       )}
 
+      {/* Динамика по месяцам */}
       {sortedMonths.length > 0 && (
         <div className="glass rounded-2xl p-5 border border-white/5">
           <h2 className="text-sm font-semibold mb-3 text-gray-300">📅 Динамика расходов</h2>
@@ -261,7 +361,7 @@ export default function StatsPage() {
                   </div>
                   <div className="w-full h-1.5 bg-white/5 rounded-full overflow-hidden mt-1">
                     <div 
-                      className="h-full bg-gradient-to-r from-red-500 to-pink-500 rounded-full transition-all duration-500"
+                      className="h-full bg-gradient-to-r from-green-500 via-yellow-500 to-red-500 rounded-full transition-all duration-500"
                       style={{ width: `${percentage}%` }}
                     />
                   </div>
@@ -272,6 +372,7 @@ export default function StatsPage() {
         </div>
       )}
 
+      {/* Итого */}
       <div className="glass rounded-2xl p-5 border border-white/5">
         <h2 className="text-sm font-semibold mb-3 text-gray-300">📋 Итого</h2>
         <div className="grid grid-cols-2 gap-3">
