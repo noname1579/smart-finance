@@ -1,9 +1,11 @@
 'use client';
 
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect } from 'react';
 import { useSession } from 'next-auth/react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
+import LoadingScreen from './components/LoadingScreen';
+import Logo from './components/Logo';
 import CategoryPieChart from './components/CategoryPieChart';
 import TransactionList from './components/TransactionList';
 import ScanButton from './components/ScanButton';
@@ -34,24 +36,29 @@ export default function HomePage() {
   const [categories, setCategories] = useState<Category[]>([]);
   const [isLoading, setIsLoading] = useState(true);
 
-  // Функция загрузки данных
-  const fetchData = useCallback(async () => {
+  useEffect(() => {
+    if (status === 'unauthenticated') {
+      router.push('/auth/login');
+      return;
+    }
+
+    if (status === 'authenticated' && session) {
+      fetchData();
+    }
+  }, [session, status, router]);
+
+  const fetchData = async () => {
     if (!session) return;
     
     try {
-      setIsLoading(true);
       const [txsRes, catsRes] = await Promise.all([
         fetch('/api/transactions', {
           cache: 'no-store',
-          headers: {
-            'Cache-Control': 'no-cache',
-          },
+          headers: { 'Cache-Control': 'no-cache' },
         }),
         fetch('/api/categories', {
           cache: 'no-store',
-          headers: {
-            'Cache-Control': 'no-cache',
-          },
+          headers: { 'Cache-Control': 'no-cache' },
         }),
       ]);
 
@@ -69,38 +76,16 @@ export default function HomePage() {
     } finally {
       setIsLoading(false);
     }
-  }, [session]);
+  };
 
-  // Загрузка данных при каждом изменении статуса сессии
-  useEffect(() => {
-    if (status === 'unauthenticated') {
-      router.push('/auth/login');
-      return;
-    }
-
-    if (status === 'authenticated' && session) {
-      fetchData();
-    }
-  }, [session, status, router, fetchData]);
-
-  // Обновление транзакций (для TransactionList)
   const handleUpdateTransactions = async (updated: Transaction[]) => {
     setTransactions(updated);
   };
 
-  // Отображение загрузки
   if (status === 'loading' || isLoading) {
-    return (
-      <div className="flex justify-center items-center h-screen bg-[#0a0a0f]">
-        <div className="text-center">
-          <div className="w-12 h-12 border-3 border-blue-500/20 border-t-blue-500 rounded-full animate-spin mx-auto"></div>
-          <p className="mt-4 text-gray-500">Загрузка...</p>
-        </div>
-      </div>
-    );
+    return <LoadingScreen />;
   }
 
-  // Расчёты
   const totalIncome = transactions
     .filter(tx => categories.find(c => c.id === tx.categoryId)?.type === 'income')
     .reduce((sum, tx) => sum + tx.amount, 0);
@@ -127,16 +112,8 @@ export default function HomePage() {
 
   return (
     <div className="p-4 space-y-6 max-w-4xl mx-auto">
-      {/* Header */}
       <div className="flex justify-between items-center pt-4">
-        <div>
-          <h1 className="text-2xl font-bold gradient-text">
-            SmartFinance
-          </h1>
-          <p className="text-xs text-gray-500 mt-1">
-            {format(new Date(), 'dd MMMM yyyy', { locale: ru })}
-          </p>
-        </div>
+        <Logo size="md" />
         <div className="flex items-center gap-3">
           <span className="text-sm text-gray-300">{session?.user?.name}</span>
           <Link
@@ -149,7 +126,6 @@ export default function HomePage() {
         </div>
       </div>
 
-      {/* Balance Card */}
       <div className="glass rounded-2xl p-6 glow border border-white/5 relative overflow-hidden">
         <div className="absolute -top-20 -right-20 w-40 h-40 bg-blue-500/10 rounded-full blur-3xl"></div>
         <div className="absolute -bottom-20 -left-20 w-40 h-40 bg-purple-500/10 rounded-full blur-3xl"></div>
@@ -171,7 +147,6 @@ export default function HomePage() {
         </div>
       </div>
 
-      {/* Stats Grid */}
       <div className="grid grid-cols-2 gap-3">
         <div className="glass rounded-2xl p-4 border border-white/5 hover-scale">
           <p className="text-xs text-gray-400">Сегодня</p>
@@ -187,13 +162,11 @@ export default function HomePage() {
         </div>
       </div>
 
-      {/* Chart */}
       <div className="glass rounded-2xl p-5 border border-white/5 hover-scale">
         <h2 className="text-sm font-semibold mb-3 text-gray-300">Расходы по категориям</h2>
         <CategoryPieChart transactions={transactions} categories={categories} />
       </div>
 
-      {/* Transactions List with Edit/Delete */}
       <div className="glass rounded-2xl p-5 border border-white/5">
         <div className="flex justify-between items-center mb-3">
           <h2 className="text-sm font-semibold text-gray-300">История</h2>
@@ -206,7 +179,6 @@ export default function HomePage() {
         />
       </div>
 
-      {/* Floating Buttons */}
       <div className="fixed bottom-24 right-4 flex flex-col gap-3 z-50">
         <ScanButton />
         <Link

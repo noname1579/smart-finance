@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { getFromStorage, setToStorage } from '../lib/storage';
 import { v4 as uuidv4 } from 'uuid';
+import LoadingScreen from '../components/LoadingScreen';
 
 type Category = {
   id: string;
@@ -124,12 +125,7 @@ export default function CategoriesPage() {
   };
 
   if (isLoading) {
-    return (
-      <div className="flex flex-col justify-center items-center h-screen">
-        <div className="w-12 h-12 border-3 border-blue-500/20 border-t-blue-500 rounded-full animate-spin"></div>
-        <p className="mt-4 text-gray-500">Загрузка...</p>
-      </div>
-    );
+    return <LoadingScreen />;
   }
 
   return (
@@ -148,7 +144,6 @@ export default function CategoriesPage() {
         </h1>
       </div>
 
-      {/* Форма добавления */}
       <div className="glass rounded-2xl p-5 border border-white/5">
         <h2 className="text-sm font-semibold text-gray-300 mb-4">➕ Новая категория</h2>
         
@@ -228,7 +223,6 @@ export default function CategoriesPage() {
         </form>
       </div>
 
-      {/* Список категорий */}
       <div className="glass rounded-2xl p-5 border border-white/5">
         <h2 className="text-sm font-semibold text-gray-300 mb-4">📋 Все категории</h2>
         

@@ -1,9 +1,11 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import { useSession } from 'next-auth/react';
 import { useToast } from '@/app/components/ToastProvider';
+import LoadingScreen from '@/app/components/LoadingScreen';
+import BackHomeButton from '@/app/components/BackHomeButton';
 
 type Category = {
   id: string;
@@ -26,7 +28,26 @@ export default function AddPage() {
   const [date, setDate] = useState('');
   const [error, setError] = useState('');
 
-  // Загрузка категорий
+  // Функция загрузки категорий
+  const fetchCategories = useCallback(async () => {
+    try {
+      const res = await fetch('/api/categories');
+      console.log('📂 Ответ от API /categories:', res.status);
+      
+      if (!res.ok) throw new Error('Ошибка загрузки категорий');
+      
+      const data = await res.json();
+      console.log('📂 Загружено категорий:', data.length);
+      
+      setCategories(data);
+    } catch (error) {
+      console.error('Error fetching categories:', error);
+      showToast('❌ Ошибка загрузки категорий', 'error');
+    } finally {
+      setIsLoading(false);
+    }
+  }, [showToast]);
+
   useEffect(() => {
     if (status === 'unauthenticated') {
       router.push('/auth/login');
@@ -35,23 +56,9 @@ export default function AddPage() {
 
     if (session) {
       fetchCategories();
-    }
-  }, [session, status]);
-
-  const fetchCategories = async () => {
-    try {
-      const res = await fetch('/api/categories');
-      if (!res.ok) throw new Error('Ошибка загрузки категорий');
-      const data = await res.json();
-      setCategories(data);
-    } catch (error) {
-      console.error('Error fetching categories:', error);
-      showToast('❌ Ошибка загрузки категорий', 'error');
-    } finally {
-      setIsLoading(false);
       setDate(new Date().toISOString().split('T')[0]);
     }
-  };
+  }, [session, status, router, fetchCategories]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -93,13 +100,11 @@ export default function AddPage() {
 
       showToast('✅ Транзакция успешно добавлена!', 'success');
       
-      // Очищаем форму
       setAmount('');
       setCategoryId('');
       setDescription('');
       setDate(new Date().toISOString().split('T')[0]);
       
-      // Переход на главную с обновлением
       router.push('/');
     } catch (error) {
       console.error('Transaction creation error:', error);
@@ -108,28 +113,14 @@ export default function AddPage() {
   };
 
   if (status === 'loading' || isLoading) {
-    return (
-      <div className="flex flex-col justify-center items-center h-screen bg-[#0a0a0f]">
-        <div className="w-12 h-12 border-3 border-blue-500/20 border-t-blue-500 rounded-full animate-spin"></div>
-        <p className="mt-4 text-gray-500">Загрузка...</p>
-      </div>
-    );
+    return <LoadingScreen />;
   }
 
   return (
     <div className="p-4 space-y-6 max-w-4xl mx-auto pb-24">
-      <div className="flex items-center gap-3 pt-4">
-        <button 
-          onClick={() => router.push('/')}
-          className="glass rounded-full p-2 hover:bg-white/5 transition"
-        >
-          <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
-          </svg>
-        </button>
-        <h1 className="text-2xl font-bold gradient-text">
-          ➕ Добавить трату
-        </h1>
+      <div className="flex items-center justify-between pt-4">
+        <h1 className="text-2xl font-bold gradient-text">➕ Добавить трату</h1>
+        <BackHomeButton />
       </div>
       
       {error && (
@@ -173,12 +164,32 @@ export default function AddPage() {
             required
           >
             <option value="" className="bg-[#0a0a0f]">Выберите категорию</option>
-            {categories.map(cat => (
-              <option key={cat.id} value={cat.id} className="bg-[#0a0a0f]">
-                {cat.icon} {cat.name} ({cat.type === 'income' ? '📈 Доход' : '📉 Расход'})
+            {categories.length === 0 ? (
+              <option value="" disabled className="bg-[#0a0a0f] text-gray-500">
+                ⚠️ Нет категорий. Создайте их в разделе "Категории"
               </option>
-            ))}
+            ) : (
+              categories.map(cat => (
+                <option key={cat.id} value={cat.id} className="bg-[#0a0a0f]">
+                  {cat.icon} {cat.name} ({cat.type === 'income' ? '📈 Доход' : '📉 Расход'})
+                </option>
+              ))
+            )}
           </select>
+          <div className="flex justify-between mt-1">
+            <p className="text-xs text-gray-500">
+              {categories.length} категорий
+            </p>
+            <button
+              type="button"
+              onClick={() => {
+                router.push('/categories');
+              }}
+              className="text-xs text-blue-400 hover:text-blue-300 transition"
+            >
+              + Управлять категориями
+            </button>
+          </div>
         </div>
 
         <div>

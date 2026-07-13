@@ -10,7 +10,7 @@ export async function POST(request: Request) {
     // Валидация
     if (!name || !email || !password) {
       return NextResponse.json(
-        { error: 'Все поля обязательны' },
+        { error: 'Все поля обязательны для заполнения' },
         { status: 400 }
       );
     }
@@ -46,24 +46,68 @@ export async function POST(request: Request) {
       },
     });
 
-    // Создание системных категорий
-    const categories = [
-      { name: 'Еда', icon: '🍔', color: '#FF6384', type: 'expense', isSystem: true },
-      { name: 'Транспорт', icon: '🚗', color: '#36A2EB', type: 'expense', isSystem: true },
-      { name: 'Жильё', icon: '🏠', color: '#FFCE56', type: 'expense', isSystem: true },
-      { name: 'Развлечения', icon: '🎮', color: '#4BC0C0', type: 'expense', isSystem: true },
-      { name: 'Зарплата', icon: '💰', color: '#FF9F40', type: 'income', isSystem: true },
-      { name: 'Прочее', icon: '📦', color: '#9966FF', type: 'expense', isSystem: true },
-    ];
-
+    // ⭐ СОЗДАНИЕ СИСТЕМНЫХ КАТЕГОРИЙ ДЛЯ ПОЛЬЗОВАТЕЛЯ
     await prisma.category.createMany({
-      data: categories.map(cat => ({ ...cat, userId: user.id })),
+      data: [
+        { 
+          userId: user.id, 
+          name: 'Еда', 
+          icon: '🍔', 
+          color: '#FF6384', 
+          type: 'expense', 
+          isSystem: true 
+        },
+        { 
+          userId: user.id, 
+          name: 'Транспорт', 
+          icon: '🚗', 
+          color: '#36A2EB', 
+          type: 'expense', 
+          isSystem: true 
+        },
+        { 
+          userId: user.id, 
+          name: 'Жильё', 
+          icon: '🏠', 
+          color: '#FFCE56', 
+          type: 'expense', 
+          isSystem: true 
+        },
+        { 
+          userId: user.id, 
+          name: 'Развлечения', 
+          icon: '🎮', 
+          color: '#4BC0C0', 
+          type: 'expense', 
+          isSystem: true 
+        },
+        { 
+          userId: user.id, 
+          name: 'Зарплата', 
+          icon: '💰', 
+          color: '#FF9F40', 
+          type: 'income', 
+          isSystem: true 
+        },
+        { 
+          userId: user.id, 
+          name: 'Прочее', 
+          icon: '📦', 
+          color: '#9966FF', 
+          type: 'expense', 
+          isSystem: true 
+        },
+      ],
     });
 
     return NextResponse.json(
-      {
-        message: 'Регистрация успешна!',
-        user: { id: user.id, name: user.name, email: user.email }
+      { 
+        message: 'Регистрация успешна!', 
+        user: { 
+          id: user.id, 
+          name: user.name, 
+          email: user.email 
+        } 
       },
       { status: 201 }
     );

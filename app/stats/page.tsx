@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { useSession } from 'next-auth/react';
 import CategoryPieChart from '../components/CategoryPieChart';
+import LoadingScreen from '../components/LoadingScreen';
 
 type Category = {
   id: string;
@@ -28,7 +29,6 @@ export default function StatsPage() {
   const [categories, setCategories] = useState<Category[]>([]);
   const [isLoading, setIsLoading] = useState(true);
 
-  // Загрузка данных
   useEffect(() => {
     if (status === 'unauthenticated') {
       router.push('/auth/login');
@@ -46,7 +46,6 @@ export default function StatsPage() {
     try {
       setIsLoading(true);
       
-      // Загружаем и транзакции, и категории
       const [txsRes, catsRes] = await Promise.all([
         fetch('/api/transactions', {
           cache: 'no-store',
@@ -65,9 +64,6 @@ export default function StatsPage() {
       const txs = await txsRes.json();
       const cats = await catsRes.json();
 
-      console.log('📊 Загружено транзакций:', txs.length);
-      console.log('📂 Загружено категорий:', cats.length);
-      
       setTransactions(txs);
       setCategories(cats);
     } catch (error) {
@@ -78,15 +74,9 @@ export default function StatsPage() {
   };
 
   if (status === 'loading' || isLoading) {
-    return (
-      <div className="flex flex-col justify-center items-center h-screen bg-[#0a0a0f]">
-        <div className="w-12 h-12 border-3 border-blue-500/20 border-t-blue-500 rounded-full animate-spin"></div>
-        <p className="mt-4 text-gray-500">Загрузка...</p>
-      </div>
-    );
+    return <LoadingScreen />;
   }
 
-  // Подсчёт с использованием загруженных категорий
   const totalExpense = transactions
     .filter(tx => {
       const cat = categories.find(c => c.id === tx.categoryId);
@@ -101,10 +91,6 @@ export default function StatsPage() {
     })
     .reduce((sum, tx) => sum + (tx.amount || 0), 0);
 
-  console.log('💸 Расходы:', totalExpense);
-  console.log('💰 Доходы:', totalIncome);
-
-  // Расходы по категориям
   const categoryStats = categories
     .filter(cat => cat.type === 'expense')
     .map(cat => {
@@ -116,7 +102,6 @@ export default function StatsPage() {
     .filter(cat => cat.total > 0)
     .sort((a, b) => b.total - a.total);
 
-  // Статистика по месяцам
   const monthStats = transactions
     .filter(tx => {
       const cat = categories.find(c => c.id === tx.categoryId);
@@ -132,7 +117,6 @@ export default function StatsPage() {
     .sort((a, b) => a[0].localeCompare(b[0]))
     .slice(-6);
 
-  // Статистика по дням
   const now = new Date();
   const dayStats = Array.from({ length: 7 }, (_, i) => {
     const d = new Date(now);
@@ -156,7 +140,7 @@ export default function StatsPage() {
 
   return (
     <div className="p-4 space-y-6 max-w-4xl mx-auto pb-24">
-      {/* Header */}
+      {/* Шапка - только стрелка и заголовок */}
       <div className="flex items-center gap-3 pt-4">
         <button 
           onClick={() => router.back()}
@@ -166,12 +150,9 @@ export default function StatsPage() {
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
           </svg>
         </button>
-        <h1 className="text-2xl font-bold gradient-text">
-          📊 Статистика
-        </h1>
+        <h1 className="text-2xl font-bold gradient-text">Статистика</h1>
       </div>
 
-      {/* Total Cards */}
       <div className="grid grid-cols-2 gap-3">
         <div className="glass rounded-2xl p-4 border border-white/5 hover-scale">
           <p className="text-xs text-gray-400">💰 Доходы</p>
@@ -187,7 +168,6 @@ export default function StatsPage() {
         </div>
       </div>
 
-      {/* Баланс */}
       <div className="glass rounded-2xl p-5 border border-white/5 glow">
         <p className="text-xs text-gray-400">Остаток</p>
         <p className={`text-2xl font-bold ${
@@ -197,7 +177,6 @@ export default function StatsPage() {
         </p>
       </div>
 
-      {/* График расходов по дням */}
       <div className="glass rounded-2xl p-5 border border-white/5">
         <h2 className="text-sm font-semibold text-gray-300 mb-4">📈 Расходы за неделю</h2>
         <div className="flex items-end gap-2 h-32">
@@ -222,13 +201,11 @@ export default function StatsPage() {
         </div>
       </div>
 
-      {/* Расходы по категориям - диаграмма */}
       <div className="glass rounded-2xl p-5 border border-white/5">
         <h2 className="text-sm font-semibold mb-3 text-gray-300">Расходы по категориям</h2>
         <CategoryPieChart transactions={transactions} categories={categories} />
       </div>
 
-      {/* Топ категорий */}
       {categoryStats.length > 0 && (
         <div className="glass rounded-2xl p-5 border border-white/5">
           <h2 className="text-sm font-semibold mb-3 text-gray-300">🏆 Топ категорий</h2>
@@ -266,7 +243,6 @@ export default function StatsPage() {
         </div>
       )}
 
-      {/* Динамика по месяцам */}
       {sortedMonths.length > 0 && (
         <div className="glass rounded-2xl p-5 border border-white/5">
           <h2 className="text-sm font-semibold mb-3 text-gray-300">📅 Динамика расходов</h2>
@@ -296,7 +272,6 @@ export default function StatsPage() {
         </div>
       )}
 
-      {/* Итоговая информация */}
       <div className="glass rounded-2xl p-5 border border-white/5">
         <h2 className="text-sm font-semibold mb-3 text-gray-300">📋 Итого</h2>
         <div className="grid grid-cols-2 gap-3">

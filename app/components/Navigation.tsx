@@ -6,6 +6,7 @@ import { usePathname } from 'next/navigation';
 const navItems = [
   { href: '/', icon: '🏠', label: 'Главная' },
   { href: '/add', icon: '➕', label: 'Добавить' },
+  { href: '/budgets', icon: '🎯', label: 'Бюджеты' },
   { href: '/categories', icon: '📂', label: 'Категории' },
   { href: '/stats', icon: '📊', label: 'Статистика' },
 ];
@@ -13,10 +14,8 @@ const navItems = [
 export default function Navigation() {
   const pathname = usePathname();
 
-  // Проверяем, находимся ли мы на страницах авторизации
   const isAuthPage = pathname?.startsWith('/auth/');
 
-  // Если на странице авторизации - не показываем навигацию
   if (isAuthPage) {
     return null;
   }
@@ -31,7 +30,7 @@ export default function Navigation() {
             <Link
               key={item.href}
               href={item.href}
-              className={`relative flex flex-col items-center gap-0.5 px-3 sm:px-5 py-2 rounded-xl text-xs transition-all duration-200 hover:bg-white/5 ${
+              className={`relative flex flex-col items-center gap-0.5 px-2 sm:px-3 py-2 rounded-xl text-xs transition-all duration-200 hover:bg-white/5 ${
                 isActive
                   ? 'text-white bg-white/10 shadow-lg shadow-white/5'
                   : 'text-gray-400 hover:text-white'
@@ -42,7 +41,7 @@ export default function Navigation() {
               }`}>
                 {item.icon}
               </span>
-              <span className={`font-medium text-[9px] sm:text-[11px] transition-colors duration-200 ${
+              <span className={`font-medium text-[8px] sm:text-[10px] transition-colors duration-200 ${
                 isActive ? 'text-white' : 'text-gray-400'
               }`}>
                 {item.label}

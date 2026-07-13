@@ -4,11 +4,11 @@ import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { signIn } from 'next-auth/react';
-import { useToast } from '@/app/components/ToastProvider';
+import LoadingScreen from '@/app/components/LoadingScreen';
+import Logo from '@/app/components/Logo';
 
 export default function LoginPage() {
   const router = useRouter();
-  const { showToast } = useToast();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
@@ -48,8 +48,6 @@ export default function LoginPage() {
         return;
       }
 
-      // ✅ Успешный вход
-      showToast('Вы успешно вошли в систему', 'success');
       router.push('/');
     } catch (error) {
       setError('Произошла ошибка. Попробуйте позже.');
@@ -57,15 +55,19 @@ export default function LoginPage() {
     }
   };
 
+  if (isLoading) {
+    return <LoadingScreen />;
+  }
+
   return (
-    <div className="h-screen w-full flex items-center justify-center p-4 overflow-hidden touch-none select-none">
+    <div className="h-screen w-full flex items-center justify-center p-4 bg-[#0a0a0f] overflow-hidden touch-none select-none">
       <div className="w-full max-w-md glass rounded-2xl p-8 border border-white/10 relative overflow-hidden">
         <div className="absolute -top-20 -right-20 w-40 h-40 bg-blue-500/5 rounded-full blur-3xl"></div>
         <div className="absolute -bottom-20 -left-20 w-40 h-40 bg-purple-500/5 rounded-full blur-3xl"></div>
         
         <div className="text-center mb-8 relative z-10">
-          <div className="text-5xl mb-2">🚀</div>
-          <h1 className="text-3xl font-bold gradient-text">SmartFinance</h1>
+          <Logo size="lg" showText={false} className="justify-center" />
+          <h1 className="text-3xl font-bold gradient-text mt-2">SmartFinance</h1>
           <p className="text-gray-400 text-sm mt-2">Войдите в свой аккаунт</p>
         </div>
 
@@ -130,6 +132,9 @@ export default function LoginPage() {
             <Link href="/auth/register" className="text-blue-400 hover:text-blue-300 transition font-medium hover:underline">
               Зарегистрироваться
             </Link>
+          </p>
+          <p className="text-xs text-gray-500 mt-4">
+            💡 Войдите, чтобы управлять финансами
           </p>
         </div>
       </div>
