@@ -11,9 +11,10 @@ const inter = Inter({ subsets: ['latin'] });
 export const metadata: Metadata = {
   title: 'SmartFinance',
   description: 'Трекер финансов со сканированием чеков',
+  manifest: '/manifest',
   icons: {
     icon: '/favicon.svg',
-    apple: '/favicon.svg',
+    apple: '/icon-192.png',
   },
 };
 
@@ -22,6 +23,7 @@ export const viewport: Viewport = {
   initialScale: 1,
   maximumScale: 1,
   userScalable: false,
+  themeColor: '#0a0a0f',
 };
 
 export default function RootLayout({
@@ -31,11 +33,6 @@ export default function RootLayout({
 }) {
   return (
     <html lang="ru" className="dark">
-      <head>
-        <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
-        <link rel="apple-touch-icon" href="/favicon.svg" />
-        <meta name="theme-color" content="#0a0a0f" />
-      </head>
       <body className={`${inter.className} bg-[#0a0a0f] min-h-screen antialiased`}>
         <AuthProvider>
           <ToastProvider>

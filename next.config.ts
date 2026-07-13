@@ -1,7 +1,16 @@
 import type { NextConfig } from "next";
 
+const withPWA = require('next-pwa')({
+  dest: 'public',
+  register: true,
+  skipWaiting: true,
+  disable: process.env.NODE_ENV === 'development',
+  buildExcludes: [/middleware-manifest\.json$/],
+});
+
 const nextConfig: NextConfig = {
-  /* config options here */
+  // Добавляем пустой объект turbopack, чтобы отключить его и использовать webpack
+  turbopack: {},
 };
 
-export default nextConfig;
+export default withPWA(nextConfig);
