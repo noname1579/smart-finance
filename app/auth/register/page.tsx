@@ -88,7 +88,7 @@ export default function RegisterPage() {
   }
 
   return (
-    <div className="h-screen w-full flex items-center justify-center p-4 bg-[#0a0a0f] overflow-hidden touch-none select-none">
+    <div className="h-screen w-full flex items-center justify-center p-4 overflow-hidden touch-none select-none">
       <div className="w-full max-w-md glass rounded-2xl p-8 border border-white/10 relative overflow-hidden">
         <div className="absolute -top-20 -right-20 w-40 h-40 bg-blue-500/5 rounded-full blur-3xl"></div>
         <div className="absolute -bottom-20 -left-20 w-40 h-40 bg-purple-500/5 rounded-full blur-3xl"></div>
