@@ -8,6 +8,7 @@ const navItems = [
   { href: '/', icon: '🏠', label: 'Главная' },
   { href: '/add', icon: '➕', label: 'Добавить' },
   { href: '/budgets', icon: '🎯', label: 'Бюджеты' },
+  { href: '/subscriptions', icon: '🔄', label: 'Подписки' }, // ← Новая вкладка
   { href: '/categories', icon: '📂', label: 'Категории' },
   { href: '/stats', icon: '📊', label: 'Статистика' },
 ];
