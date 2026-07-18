@@ -4,9 +4,11 @@ import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { useSession } from 'next-auth/react';
 import CategoryPieChart from '../components/CategoryPieChart';
+import AnalyticsCharts from '../components/AnalyticsCharts';
 import LoadingScreen from '../components/LoadingScreen';
 import BackHomeButton from '../components/BackHomeButton';
 import { formatMoney } from '@/app/lib/formatMoney';
+import { getBalanceChartData, getMonthComparison, getExpenseForecast, setCategoriesForAnalytics } from '@/app/lib/analytics';
 
 type Category = {
   id: string;
@@ -30,6 +32,7 @@ export default function StatsPage() {
   const [transactions, setTransactions] = useState<Transaction[]>([]);
   const [categories, setCategories] = useState<Category[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [periodDays, setPeriodDays] = useState(30);
 
   useEffect(() => {
     if (status === 'unauthenticated') {
@@ -66,6 +69,9 @@ export default function StatsPage() {
       const txs = await txsRes.json();
       const cats = await catsRes.json();
 
+      // ⭐ Устанавливаем категории для аналитики
+      setCategoriesForAnalytics(cats);
+      
       setTransactions(txs);
       setCategories(cats);
     } catch (error) {
@@ -153,6 +159,11 @@ export default function StatsPage() {
   const expenses = dayStats.filter(d => d.total > 0);
   const maxExpense = expenses.length > 0 ? Math.max(...expenses.map(d => d.total)) : 0;
 
+  // 📊 АНАЛИТИКА
+  const chartData = getBalanceChartData(transactions, periodDays);
+  const monthComparison = getMonthComparison(transactions);
+  const forecast = getExpenseForecast(transactions, 7);
+
   return (
     <div className="p-4 space-y-6 max-w-4xl mx-auto pb-24">
       <div className="flex items-center justify-between pt-4">
@@ -184,6 +195,51 @@ export default function StatsPage() {
         </p>
       </div>
 
+      {/* 📈 Графики и аналитика */}
+      <div className="glass rounded-2xl p-5 border border-white/5">
+        <div className="flex justify-between items-center mb-4">
+          <h2 className="text-sm font-semibold text-gray-300">📈 Динамика</h2>
+          <div className="flex gap-1">
+            <button
+              onClick={() => setPeriodDays(7)}
+              className={`px-2 py-0.5 rounded-lg text-[10px] transition ${
+                periodDays === 7
+                  ? 'glass border border-blue-500/50 text-blue-400'
+                  : 'glass-light text-gray-400 hover:text-white'
+              }`}
+            >
+              7д
+            </button>
+            <button
+              onClick={() => setPeriodDays(30)}
+              className={`px-2 py-0.5 rounded-lg text-[10px] transition ${
+                periodDays === 30
+                  ? 'glass border border-blue-500/50 text-blue-400'
+                  : 'glass-light text-gray-400 hover:text-white'
+              }`}
+            >
+              30д
+            </button>
+            <button
+              onClick={() => setPeriodDays(90)}
+              className={`px-2 py-0.5 rounded-lg text-[10px] transition ${
+                periodDays === 90
+                  ? 'glass border border-blue-500/50 text-blue-400'
+                  : 'glass-light text-gray-400 hover:text-white'
+              }`}
+            >
+              90д
+            </button>
+          </div>
+        </div>
+        <AnalyticsCharts 
+          chartData={chartData}
+          forecast={forecast.forecast}
+          monthComparison={monthComparison}
+        />
+      </div>
+
+      {/* 📊 Недельный график */}
       <div className="glass rounded-2xl p-5 border border-white/5">
         <div className="flex justify-between items-center mb-4">
           <h2 className="text-sm font-semibold text-gray-300">📈 Расходы за неделю</h2>
@@ -223,7 +279,7 @@ export default function StatsPage() {
                 return (
                   <div key={index} className="flex-1 flex flex-col items-center gap-1">
                     <span className={`text-[10px] ${day.total > 0 ? 'text-gray-300 font-medium' : 'text-gray-600'}`}>
-                      {day.total > 0 ? `${formatMoney(day.total)}` : ''}
+                      {day.total > 0 ? formatMoney(day.total) : ''}
                     </span>
                     
                     <div 
@@ -245,21 +301,6 @@ export default function StatsPage() {
                   </div>
                 );
               })}
-            </div>
-
-            <div className="relative pt-2">
-              <div className="flex justify-between items-center">
-                <span className="text-[10px] text-gray-500">Мин</span>
-                <span className="text-[10px] text-gray-500">Макс</span>
-              </div>
-              <div className="w-full h-1 bg-white/5 rounded-full overflow-hidden mt-1">
-                <div 
-                  className="h-full bg-gradient-to-r from-green-500 via-yellow-500 to-red-500 rounded-full transition-all duration-1000"
-                  style={{ 
-                    width: `${(maxExpense / maxDayTotal) * 100}%` 
-                  }}
-                />
-              </div>
             </div>
 
             <div className="grid grid-cols-3 gap-2 pt-2 border-t border-white/5">
@@ -286,6 +327,7 @@ export default function StatsPage() {
         )}
       </div>
 
+      {/* Расходы по категориям */}
       <div className="glass rounded-2xl p-5 border border-white/5">
         <h2 className="text-sm font-semibold mb-3 text-gray-300">Расходы по категориям</h2>
         <CategoryPieChart transactions={transactions} categories={categories} />
