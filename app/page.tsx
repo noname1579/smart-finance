@@ -70,6 +70,9 @@ export default function HomePage() {
       const txs = await txsRes.json();
       const cats = await catsRes.json();
 
+      console.log('📊 Загружено транзакций:', txs.length);
+      console.log('📂 Загружено категорий:', cats.length);
+
       setTransactions(txs);
       setCategories(cats);
     } catch (error) {
@@ -113,6 +116,7 @@ export default function HomePage() {
 
   return (
     <div className="p-4 space-y-6 max-w-4xl mx-auto">
+      {/* Header */}
       <div className="flex justify-between items-center pt-4">
         <Logo size="md" />
         <div className="flex items-center gap-3">
@@ -127,6 +131,7 @@ export default function HomePage() {
         </div>
       </div>
 
+      {/* Balance Card */}
       <div className="glass rounded-2xl p-6 glow border border-white/5 relative overflow-hidden">
         <div className="absolute -top-20 -right-20 w-40 h-40 bg-blue-500/10 rounded-full blur-3xl"></div>
         <div className="absolute -bottom-20 -left-20 w-40 h-40 bg-purple-500/10 rounded-full blur-3xl"></div>
@@ -148,6 +153,7 @@ export default function HomePage() {
         </div>
       </div>
 
+      {/* Stats Grid */}
       <div className="grid grid-cols-2 gap-3">
         <div className="glass rounded-2xl p-4 border border-white/5 hover-scale">
           <p className="text-xs text-gray-400">Сегодня</p>
@@ -163,11 +169,13 @@ export default function HomePage() {
         </div>
       </div>
 
+      {/* ⭐ ГРАФИК — ПЕРЕДАЁМ ПРОПСЫ */}
       <div className="glass rounded-2xl p-5 border border-white/5 hover-scale">
         <h2 className="text-sm font-semibold mb-3 text-gray-300">Расходы по категориям</h2>
         <CategoryPieChart transactions={transactions} categories={categories} />
       </div>
 
+      {/* Transactions List */}
       <div className="glass rounded-2xl p-5 border border-white/5">
         <div className="flex justify-between items-center mb-3">
           <h2 className="text-sm font-semibold text-gray-300">История</h2>
@@ -180,6 +188,7 @@ export default function HomePage() {
         />
       </div>
 
+      {/* Floating Buttons */}
       <div className="fixed bottom-24 right-4 flex flex-col gap-3 z-50">
         <ScanButton 
           categories={categories}

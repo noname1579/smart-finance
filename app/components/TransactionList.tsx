@@ -346,7 +346,7 @@ export default function TransactionList({ transactions, categories, onUpdate }: 
         {filteredTransactions.length > 0 && (
           <div className="text-right">
             <span className={`text-[10px] sm:text-xs ${totalFiltered >= 0 ? 'text-green-400' : 'text-red-400'}`}>
-              Итого: {totalFiltered >= 0 ? '+' : ''}{formatMoneyWithSign(totalFiltered, totalFiltered < 0)}
+              Итого: {totalFiltered >= 0 ? '' : ''}{formatMoneyWithSign(totalFiltered, totalFiltered < 0)}
             </span>
             <span className="text-[10px] sm:text-xs text-gray-500 ml-2">
               ({filteredTransactions.length})

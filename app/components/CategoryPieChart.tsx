@@ -1,6 +1,10 @@
 'use client';
 
-import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip } from 'recharts';
+import { useEffect, useState, useRef } from 'react';
+import { Chart as ChartJS, ArcElement, Tooltip, Legend, Plugin } from 'chart.js';
+import { Pie } from 'react-chartjs-2';
+
+ChartJS.register(ArcElement, Tooltip, Legend);
 
 type Transaction = {
   id: string;
@@ -22,116 +26,298 @@ type Props = {
   categories: Category[];
 };
 
-const COLORS = ['#FF6384', '#36A2EB', '#FFCE56', '#4BC0C0', '#9966FF', '#FF9F40'];
+// ⭐ Плагин для текста в центре
+const centerTextPlugin: Plugin<'pie'> = {
+  id: 'centerText',
+  beforeDraw: function(chart) {
+    const { width, height, ctx } = chart;
+    ctx.save();
+    
+    const total = (chart.data.datasets[0].data as number[]).reduce((a, b) => a + b, 0);
+    
+    // Градиент для фона
+    const gradient = ctx.createRadialGradient(
+      width / 2, height / 2, 0,
+      width / 2, height / 2, 60
+    );
+    gradient.addColorStop(0, 'rgba(255,255,255,0.05)');
+    gradient.addColorStop(1, 'rgba(255,255,255,0)');
+    
+    ctx.fillStyle = gradient;
+    ctx.beginPath();
+    ctx.arc(width / 2, height / 2, 60, 0, Math.PI * 2);
+    ctx.fill();
+    
+    // Сумма с градиентом
+    const textGradient = ctx.createLinearGradient(
+      width / 2 - 40, height / 2 - 20,
+      width / 2 + 40, height / 2 + 20
+    );
+    textGradient.addColorStop(0, '#60a5fa');
+    textGradient.addColorStop(0.5, '#a78bfa');
+    textGradient.addColorStop(1, '#f472b6');
+    
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.font = 'bold 28px Inter, sans-serif';
+    ctx.fillStyle = textGradient;
+    ctx.shadowColor = 'rgba(167, 139, 250, 0.3)';
+    ctx.shadowBlur = 20;
+    ctx.fillText(`${total} ₽`, width / 2, height / 2 - 10);
+    
+    // Подпись
+    ctx.shadowBlur = 0;
+    ctx.font = '11px Inter, sans-serif';
+    ctx.fillStyle = '#6b7280';
+    ctx.fillText('Всего расходов', width / 2, height / 2 + 24);
+    
+    ctx.restore();
+  }
+};
 
 export default function CategoryPieChart({ transactions, categories }: Props) {
-  // Группируем расходы по категориям
-  const expenseTxs = transactions.filter(tx => {
-    const cat = categories.find(c => c.id === tx.categoryId);
-    return cat?.type === 'expense';
-  });
+  const [chartData, setChartData] = useState<any>(null);
+  const [isClient, setIsClient] = useState(false);
+  const chartRef = useRef<any>(null);
 
-  const grouped = expenseTxs.reduce<Record<string, number>>((acc, tx) => {
-    acc[tx.categoryId] = (acc[tx.categoryId] || 0) + tx.amount;
-    return acc;
-  }, {});
+  useEffect(() => {
+    setIsClient(true);
+  }, []);
 
-  // Фильтруем только категории с суммой > 0 и сортируем по убыванию
-  const data = Object.entries(grouped)
-    .filter(([_, total]) => total > 0) // ← Убираем нулевые значения
-    .map(([catId, total]) => {
-      const cat = categories.find(c => c.id === catId);
-      return {
-        name: cat?.name || 'Без категории',
-        value: Math.round(total * 100) / 100,
-        color: cat?.color || '#8884d8',
-        icon: cat?.icon || '❓',
-      };
-    })
-    .sort((a, b) => b.value - a.value);
+  useEffect(() => {
+    if (transactions && transactions.length > 0 && categories && categories.length > 0) {
+      const expenseTxs = transactions.filter(tx => {
+        const cat = categories.find(c => c.id === tx.categoryId);
+        return cat?.type === 'expense' && tx.amount > 0;
+      });
 
-  // Если нет данных - показываем сообщение
-  if (data.length === 0) {
+      if (expenseTxs.length > 0) {
+        const grouped = expenseTxs.reduce<Record<string, number>>((acc, tx) => {
+          acc[tx.categoryId] = (acc[tx.categoryId] || 0) + tx.amount;
+          return acc;
+        }, {});
+
+        const labels: string[] = [];
+        const values: number[] = [];
+        const colors: string[] = [];
+        const icons: string[] = [];
+
+        Object.entries(grouped)
+          .filter(([_, total]) => total > 0)
+          .sort((a, b) => b[1] - a[1])
+          .forEach(([catId, total]) => {
+            const cat = categories.find(c => c.id === catId);
+            labels.push(cat?.name || 'Без категории');
+            values.push(total);
+            colors.push(cat?.color || '#8884d8');
+            icons.push(cat?.icon || '📌');
+          });
+
+        if (labels.length > 0) {
+          setChartData({
+            labels,
+            datasets: [
+              {
+                data: values,
+                backgroundColor: colors.map(c => c + 'CC'),
+                borderColor: colors,
+                borderWidth: 3,
+                hoverOffset: 20,
+                hoverBorderWidth: 4,
+              },
+            ],
+            icons,
+          });
+          return;
+        }
+      }
+    }
+
+    // Тестовые данные
+    setChartData({
+      labels: ['Еда', 'Транспорт', 'Жильё'],
+      datasets: [
+        {
+          data: [400, 300, 200],
+          backgroundColor: ['#FF6384CC', '#36A2EBCC', '#FFCE56CC'],
+          borderColor: ['#FF6384', '#36A2EB', '#FFCE56'],
+          borderWidth: 3,
+          hoverOffset: 20,
+          hoverBorderWidth: 4,
+        },
+      ],
+      icons: ['🍔', '🚗', '🏠'],
+    });
+  }, [transactions, categories]);
+
+  if (!isClient || !chartData) {
     return (
-      <div className="flex flex-col items-center justify-center h-48 text-gray-500">
-        <span className="text-4xl mb-2">📊</span>
-        <p className="text-sm">Нет расходов</p>
+      <div className="flex items-center justify-center h-48">
+        <div className="flex flex-col items-center gap-3">
+          <div className="w-10 h-10 border-3 border-blue-500/20 border-t-blue-500 rounded-full animate-spin"></div>
+          <p className="text-sm text-gray-500 animate-pulse">Загрузка графика...</p>
+        </div>
+      </div>
+    );
+  }
+
+  const hasData = chartData.datasets[0].data.some((v: number) => v > 0);
+
+  if (!hasData) {
+    return (
+      <div className="flex flex-col items-center justify-center h-48">
+        <div className="text-5xl mb-3 opacity-50">📊</div>
+        <p className="text-sm text-gray-500">Нет расходов</p>
         <p className="text-xs text-gray-600 mt-1">Добавьте первую трату</p>
       </div>
     );
   }
 
-  // Кастомный тултип
-  const CustomTooltip = ({ active, payload }: any) => {
-    if (active && payload && payload.length) {
-      const data = payload[0].payload;
-      return (
-        <div className="glass rounded-xl p-3 border border-white/10 shadow-xl">
-          <div className="flex items-center gap-2">
-            <span className="text-lg">{data.icon}</span>
-            <span className="text-sm font-medium text-white">{data.name}</span>
-          </div>
-          <p className="text-lg font-bold text-white mt-1">
-            {data.value.toFixed(2)} ₽
-          </p>
-          <p className="text-xs text-gray-400">
-            {((data.value / data.total) * 100).toFixed(1)}% от всех расходов
-          </p>
-        </div>
-      );
+  const total = chartData.datasets[0].data.reduce((a: number, b: number) => a + b, 0);
+
+  // ⭐ Кастомный тултип — исправлен тип weight
+  const customTooltip = {
+    backgroundColor: 'rgba(10, 10, 15, 0.95)',
+    borderColor: 'rgba(255, 255, 255, 0.08)',
+    borderWidth: 1,
+    borderRadius: 16,
+    padding: 14,
+    titleColor: '#ffffff',
+    bodyColor: '#d1d5db',
+    titleFont: { 
+      size: 13, 
+      weight: 'bold' as const, // ← исправлено
+      family: 'Inter' 
+    },
+    bodyFont: { 
+      size: 12, 
+      family: 'Inter' 
+    },
+    callbacks: {
+      label: function(context: any) {
+        const percentage = total > 0 ? ((context.parsed / total) * 100).toFixed(1) : 0;
+        const icon = chartData.icons?.[context.dataIndex] || '';
+        return `${icon} ${context.label}: ${context.parsed} ₽ (${percentage}%)`;
+      }
     }
-    return null;
   };
 
-  // Вычисляем общую сумму для процентов
-  const total = data.reduce((sum, item) => sum + item.value, 0);
+  // ⭐ Данные для сводки
+  const summaryData = chartData.labels.map((label: string, index: number) => ({
+    label,
+    value: chartData.datasets[0].data[index],
+    color: chartData.datasets[0].backgroundColor[index],
+    borderColor: chartData.datasets[0].borderColor[index],
+    icon: chartData.icons?.[index] || '📌',
+    percentage: total > 0 ? ((chartData.datasets[0].data[index] / total) * 100).toFixed(0) : 0,
+  })).sort((a: any, b: any) => b.value - a.value);
 
   return (
-    <div className="w-full">
-      <ResponsiveContainer width="100%" height={300}>
-        <PieChart>
-          <Pie
-            data={data.map(item => ({ ...item, total }))}
-            dataKey="value"
-            nameKey="name"
-            cx="50%"
-            cy="50%"
-            outerRadius={100}
-            innerRadius={60}
-            paddingAngle={2}
-            label={({ name, percent }) => {
-              const percentage = percent ? Math.round(percent * 100) : 0;
-              return percentage > 5 ? `${percentage}%` : '';
-            }}
-            labelLine={false}
-          >
-            {data.map((entry, index) => (
-              <Cell 
-                key={`cell-${index}`} 
-                fill={entry.color}
-                stroke="rgba(10, 10, 15, 0.8)"
-                strokeWidth={2}
-              />
-            ))}
-          </Pie>
-          <Tooltip content={<CustomTooltip />} />
-        </PieChart>
-      </ResponsiveContainer>
-      
-      {/* Легенда */}
-      <div className="grid grid-cols-2 gap-2 mt-4">
-        {data.map((item, index) => (
-          <div key={index} className="flex items-center gap-2 text-xs">
-            <div 
-              className="w-3 h-3 rounded-full shrink-0"
-              style={{ backgroundColor: item.color }}
+    <div className="w-full space-y-6">
+      {/* График */}
+      <div className="relative">
+        <div 
+          className="relative rounded-2xl bg-gradient-to-br from-white/[0.03] to-transparent p-4 border border-white/5"
+          style={{ 
+            backdropFilter: 'blur(10px)',
+            WebkitBackdropFilter: 'blur(10px)',
+          }}
+        >
+          <div style={{ height: '340px', position: 'relative' }}>
+            <Pie
+              ref={chartRef}
+              data={chartData}
+              options={{
+                responsive: true,
+                maintainAspectRatio: false,
+                cutout: '65%',
+                plugins: {
+                  legend: {
+                    display: false,
+                  },
+                  tooltip: customTooltip,
+                },
+                animation: {
+                  animateRotate: true,
+                  duration: 1200,
+                  easing: 'easeInOutQuart',
+                },
+              }}
+              plugins={[centerTextPlugin]}
             />
-            <span className="text-gray-300 truncate">{item.icon} {item.name}</span>
-            <span className="text-gray-500 ml-auto">
-              {((item.value / total) * 100).toFixed(0)}%
-            </span>
           </div>
-        ))}
+        </div>
+        
+        {/* Медиа-запрос для скрытия текста в центре на мобильных */}
+        <style>{`
+          @media (max-width: 640px) {
+            canvas + div {
+              display: none !important;
+            }
+          }
+        `}</style>
+      </div>
+
+      {/* Сводка */}
+      <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
+        {summaryData.slice(0, 6).map((item: any, index: number) => {
+          const maxValue = summaryData[0]?.value || 1;
+          const barWidth = (item.value / maxValue) * 100;
+          
+          return (
+            <div 
+              key={index}
+              className="group relative glass-light rounded-xl p-3 border border-white/5 hover:border-white/10 transition-all duration-300 hover:scale-[1.02] hover:shadow-lg hover:shadow-white/5"
+            >
+              <div className="flex items-center gap-2.5">
+                <div 
+                  className="w-8 h-8 rounded-xl flex items-center justify-center text-sm shrink-0 transition-transform group-hover:scale-110"
+                  style={{ 
+                    background: `${item.borderColor}20`,
+                    border: `1px solid ${item.borderColor}30`,
+                  }}
+                >
+                  {item.icon}
+                </div>
+                
+                <div className="flex-1 min-w-0">
+                  <div className="flex justify-between items-start gap-1">
+                    <span className="text-[11px] font-medium text-gray-300 truncate">
+                      {item.label}
+                    </span>
+                    <span className="text-[10px] font-bold text-white shrink-0">
+                      {item.percentage}%
+                    </span>
+                  </div>
+                  
+                  <div className="w-full h-1 bg-white/5 rounded-full overflow-hidden mt-1.5">
+                    <div 
+                      className="h-full rounded-full transition-all duration-1000 ease-out"
+                      style={{ 
+                        width: `${Math.max(barWidth, 2)}%`,
+                        background: `linear-gradient(90deg, ${item.borderColor}, ${item.borderColor}aa)`,
+                        boxShadow: `0 0 10px ${item.borderColor}40`,
+                      }}
+                    />
+                  </div>
+                  
+                  <span className="text-[9px] text-gray-500 mt-0.5 block">
+                    {item.value.toFixed(0)} ₽
+                  </span>
+                </div>
+              </div>
+            </div>
+          );
+        })}
+      </div>
+      
+      {/* Информация о сумме */}
+      <div className="text-center">
+        <p className="text-[10px] text-gray-500">
+          Всего расходов: <span className="text-gray-300 font-medium">{total.toFixed(0)} ₽</span>
+          {' • '}
+          <span className="text-gray-500">{summaryData.length} категорий</span>
+        </p>
       </div>
     </div>
   );

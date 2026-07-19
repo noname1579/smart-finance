@@ -1,13 +1,22 @@
 import { NextResponse } from 'next/server';
 import { prisma } from '@/app/lib/prisma';
 
-// Этот эндпоинт будет вызываться по расписанию (например, каждый день)
+// ⭐ Добавляем GET для теста в браузере
+export async function GET() {
+  return await handleCron();
+}
+
+// POST для продакшена
 export async function POST() {
+  return await handleCron();
+}
+
+async function handleCron() {
   try {
     const today = new Date();
     today.setHours(0, 0, 0, 0);
 
-    // Находим все активные платежи, у которых nextDate === сегодня
+    // Находим все активные платежи, у которых nextDate <= сегодня
     const payments = await prisma.recurringPayment.findMany({
       where: {
         isActive: true,
@@ -25,9 +34,27 @@ export async function POST() {
       },
     });
 
+    console.log(`📅 Найдено ${payments.length} платежей для списания`);
+
     let createdCount = 0;
 
     for (const payment of payments) {
+      // Проверяем, не создана ли уже транзакция сегодня
+      const existing = await prisma.transaction.findFirst({
+        where: {
+          userId: payment.userId,
+          description: `${payment.name} (регулярный платёж)`,
+          date: {
+            gte: today,
+          },
+        },
+      });
+
+      if (existing) {
+        console.log(`⏭️ Платёж ${payment.name} уже списан сегодня`);
+        continue;
+      }
+
       // Создаём транзакцию
       await prisma.transaction.create({
         data: {
@@ -63,6 +90,7 @@ export async function POST() {
       });
 
       createdCount++;
+      console.log(`✅ Создана транзакция для ${payment.name}`);
     }
 
     return NextResponse.json({
