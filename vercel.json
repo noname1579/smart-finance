@@ -4,12 +4,8 @@
   "framework": "nextjs",
   "crons": [
     {
-      "path": "/api/keep-alive",
-      "schedule": "*/5 * * * *"
-    },
-    {
       "path": "/api/cron/recurring-payments",
-      "schedule": "0 6 * * *"
+      "schedule": "0 0 * * *"
     }
   ]
 }
